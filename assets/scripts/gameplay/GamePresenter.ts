@@ -1,5 +1,3 @@
-import {IInitializable}  from "../core/GameFactory";
-
 export interface GameState{
     getMovesLeft(): number;
     getScore(): number;

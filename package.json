@@ -1,0 +1,11 @@
+{
+    "name": "pop-blast-test-tools",
+    "private": true,
+    "type": "module",
+    "engines": {
+        "node": ">=22.18.0"
+    },
+    "scripts": {
+        "test": "node --test tests/*.test.mjs"
+    }
+}

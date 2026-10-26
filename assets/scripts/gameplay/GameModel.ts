@@ -1,4 +1,4 @@
-import {GameState, IGameModel} from "./GamePresenter";
+import type { GameState, IGameModel } from "./GamePresenter";
 
 export class GameModel implements IGameModel {
     private movesLeft: number;
