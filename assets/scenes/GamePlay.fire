@@ -396,7 +396,7 @@
   },
   {
     "__type__": "cc.Node",
-    "_name": "New Label",
+    "_name": "Score",
     "_objFlags": 0,
     "_parent": {
       "__id__": 6
