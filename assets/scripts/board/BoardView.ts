@@ -42,6 +42,7 @@ export default class BoardView extends cc.Component implements IBoardView, IInit
             }
             const tile = this.tilePool.get();
             tile.setSprite(this.colorSprites[cells[i]]);
+            tile.setSize(this.cellSize);
             const column = i % this.config.boardColumns;
             const row = Math.floor(i / this.config.boardColumns);
             tile.node.parent = this.initialPoint;

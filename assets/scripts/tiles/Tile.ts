@@ -8,4 +8,9 @@ export default class Tile extends cc.Component {
     public setSprite(spriteFrame: cc.SpriteFrame): void {
         this.sprite.spriteFrame = spriteFrame;
     }
+
+    public setSize(size: cc.Size): void {
+        this.sprite.sizeMode = cc.Sprite.SizeMode.CUSTOM;
+        this.sprite.node.setContentSize(size);
+    }
 }
