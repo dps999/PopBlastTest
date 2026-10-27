@@ -19,6 +19,6 @@ export default class GameBootstrap extends cc.Component {
     private colorSprites: cc.SpriteFrame[] = [];
 
     protected start(): void {
-        GameFactory.createBoard(this.boardView, this.tilePrefab, this.colorSprites);
+        GameFactory.createBoard(this.boardView, this.tilePrefab, this.colorSprites, this.config);
     }
 }

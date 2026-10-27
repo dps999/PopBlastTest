@@ -2,6 +2,7 @@ import { BoardController } from "../board/BoardController";
 import { BoardModel } from "../board/BoardModel";
 import BoardView from "../board/BoardView";
 import { TilePool } from "../tiles/TilePool";
+import type { GameConfig } from "./GameConfig";
 
 /** Компонент, которому фабрика передаёт зависимости после создания Cocos. */
 export interface IInitializable<TDependencies> {
@@ -10,12 +11,18 @@ export interface IInitializable<TDependencies> {
 
 /** Единая точка создания игровых компонентов с явным внедрением зависимостей. */
 export class GameFactory {
-    public static createBoard(view: BoardView, tilePrefab: cc.Prefab, colorSprites: cc.SpriteFrame[]): BoardController {
-        const model = new BoardModel();
+    public static createBoard(
+        view: BoardView,
+        tilePrefab: cc.Prefab,
+        colorSprites: cc.SpriteFrame[],
+        config: GameConfig
+    ): BoardController {
+        const model = new BoardModel(config.boardRows, config.boardColumns);
         const tilePool = new TilePool(tilePrefab);
         view.init({
             tilePool,
-            colorSprites
+            colorSprites,
+            config
         });
         const controller = new BoardController(model, view);
         controller.init();

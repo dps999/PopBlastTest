@@ -1,11 +1,5 @@
-export interface IBoardModel {
-    init(): void;
-    getCells(): number[];
-}
-
-export interface IBoardView {
-    initRender(cells: number[]): void;
-}
+import {IBoardView} from "./IBoardView";
+import {IBoardModel} from "./IBoardModel";
 
 export class BoardController {
     private readonly model: IBoardModel;
