@@ -16,5 +16,8 @@ these files use Node.js APIs and are not game assets.
 
 The suite covers `GameModel`, the initial state and instance isolation of
 `BoardModel`, and `BoardController` initialization order and cell forwarding.
-`BoardEngine` currently has no behavior to test. Rendering in `BoardView` requires
-the Cocos runtime and is not covered by this Node.js suite.
+`BoardController` also verifies synchronous click processing.
+`BoardEngine` tests cover connected color groups, row boundaries, diagonals,
+empty cells, invalid indices, reading current model data without changing it,
+reusing the visited buffer, and synchronous turn results.
+Rendering in `BoardView` requires the Cocos runtime and is not covered by this Node.js suite.

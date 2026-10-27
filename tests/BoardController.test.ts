@@ -5,6 +5,27 @@ import { BoardModel } from "../assets/scripts/board/BoardModel.ts";
 import { BoardEngine } from "../assets/scripts/board/BoardEngine.ts";
 
 describe("BoardController", () => {
+    it("processes the clicked cell synchronously", () => {
+        const calls: string[] = [];
+        let clickedIndex = -1;
+        const controller = new BoardController(
+            { init(): void {}, getCells(): number[] { return []; } },
+            { initRender(): void {} },
+            {
+                processClick(index: number) {
+                    clickedIndex = index;
+                    calls.push("processClick");
+                    return { valid: false, steps: [] };
+                }
+            }
+        );
+        controller.onCellClicked(12);
+        calls.push("returned");
+
+        assert.equal(clickedIndex, 12);
+        assert.deepEqual(calls, ["processClick", "returned"]);
+    });
+
     it("initializes the model before reading cells and rendering exactly once", () => {
         const calls: string[] = [];
         const cells = [2, 0, 1];
@@ -26,7 +47,11 @@ describe("BoardController", () => {
                 assert.deepEqual(renderedCells, [2, 0, 1]);
             }
         };
-        const controller = new BoardController(model, view, new BoardEngine());
+        const controller = new BoardController(model, view, {
+            processClick() {
+                return { valid: false, steps: [] };
+            }
+        });
 
         assert.deepEqual(calls, []);
 
@@ -42,7 +67,7 @@ describe("BoardController", () => {
             initRender(cells: number[]): void {
                 renderedBoards.push(cells);
             }
-        }, new BoardEngine());
+        }, new BoardEngine(model, 3));
 
         controller.init();
 

@@ -11,7 +11,11 @@ export class BoardInputService {
     public bind(node: cc.Node, index: number): void {
         this.unbind(node);
         const handler = (): void => {
-            this.controller.onCellClicked(index);
+            try {
+                this.controller.onCellClicked(index);
+            } catch (error) {
+                cc.error(error);
+            }
         };
         node.on(cc.Node.EventType.TOUCH_END, handler);
         this.handlers.set(node, handler);
