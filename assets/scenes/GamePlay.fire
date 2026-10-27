@@ -988,13 +988,16 @@
       "__id__": 15
     },
     "_enabled": true,
+    "boardBackground": {
+      "__id__": 17
+    },
     "initialPoint": {
       "__id__": 19
     },
-    "cellSize": {
+    "tileSpacing": {
       "__type__": "cc.Size",
-      "width": 85,
-      "height": 90
+      "width": 4,
+      "height": 4
     },
     "_id": "2dd0P5fApBZZ8WzdSKhwJe"
   },

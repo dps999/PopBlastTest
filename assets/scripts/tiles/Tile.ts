@@ -10,7 +10,16 @@ export default class Tile extends cc.Component {
     }
 
     public setSize(size: cc.Size): void {
+        const originalSize = this.sprite.spriteFrame.getOriginalSize();
+        const scale = Math.min(
+            size.width / originalSize.width,
+            size.height / originalSize.height
+        );
+
         this.sprite.sizeMode = cc.Sprite.SizeMode.CUSTOM;
-        this.sprite.node.setContentSize(size);
+        this.sprite.node.setContentSize(
+            originalSize.width * scale,
+            originalSize.height * scale
+        );
     }
 }
