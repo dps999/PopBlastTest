@@ -21,11 +21,11 @@ export class BoardEngine implements IBoardEngine {
             return { valid: false, steps: [] };
         }
 
-        // Удаление
+        this.model.removeCells(matches);
+
         // Гравитация
         // Заполнение
-        // Формирование TurnResult
-        return { valid: true, steps: [] };
+        return { valid: true, steps: [{ type: "remove", indices: matches }] };
     }
 
     public findGroup(index: number): number[] {

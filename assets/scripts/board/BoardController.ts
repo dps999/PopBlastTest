@@ -20,6 +20,15 @@ export class BoardController implements IBoardController {
     }
 
     public onCellClicked(index: number): void {
-        this.engine.processClick(index);
+        const result = this.engine.processClick(index);
+        if (!result.valid) {
+            return;
+        }
+
+        for (const step of result.steps) {
+            if (step.type === "remove") {
+                this.view.removeTiles(step.indices);
+            }
+        }
     }
 }

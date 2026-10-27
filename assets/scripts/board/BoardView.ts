@@ -51,6 +51,19 @@ export default class BoardView extends cc.Component implements IBoardView, IInit
         }
     }
 
+    public removeTiles(indices: number[]): void {
+        for (const index of indices) {
+            const tile = this.tiles[index];
+            if (!tile) {
+                continue;
+            }
+
+            this.inputService.unbind(tile.sprite.node);
+            this.tilePool.release(tile);
+            this.tiles[index] = null;
+        }
+    }
+
     protected onDestroy(): void {
         if (this.inputService) {
             this.inputService.dispose();

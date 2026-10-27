@@ -1,6 +1,11 @@
+export interface RemoveStep {
+    type: "remove";
+    indices: number[];
+}
+
 export interface TurnResult {
     valid: boolean;
-    steps: unknown[];
+    steps: RemoveStep[];
 }
 
 export interface IBoardEngine {
