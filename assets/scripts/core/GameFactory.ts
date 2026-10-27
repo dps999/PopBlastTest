@@ -1,3 +1,8 @@
+import { BoardController } from "../board/BoardController";
+import { BoardModel } from "../board/BoardModel";
+import BoardView from "../board/BoardView";
+import { TilePool } from "../tiles/TilePool";
+
 /** Компонент, которому фабрика передаёт зависимости после создания Cocos. */
 export interface IInitializable<TDependencies> {
     init(dependencies: TDependencies): void;
@@ -5,6 +10,18 @@ export interface IInitializable<TDependencies> {
 
 /** Единая точка создания игровых компонентов с явным внедрением зависимостей. */
 export class GameFactory {
+    public static createBoard(view: BoardView, tilePrefab: cc.Prefab, colorSprites: cc.SpriteFrame[]): BoardController {
+        const model = new BoardModel();
+        const tilePool = new TilePool(tilePrefab);
+        view.init({
+            tilePool,
+            colorSprites
+        });
+        const controller = new BoardController(model, view);
+        controller.init();
+        return controller;
+    }
+
     public static addComponent<TDependencies, T extends cc.Component & IInitializable<TDependencies>>(
         node: cc.Node,
         componentType: { new(): T },
