@@ -25,10 +25,7 @@ export class BoardController implements IBoardController {
             return;
         }
 
-        for (const step of result.steps) {
-            if (step.type === "remove") {
-                this.view.removeTiles(step.indices);
-            }
-        }
+        this.view.removeTiles(result.removedIndices);
+        this.view.moveTiles(result.moves);
     }
 }

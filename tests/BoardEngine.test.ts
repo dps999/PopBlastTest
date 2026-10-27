@@ -24,6 +24,10 @@ function createEngine(cells: number[], columns: number): BoardEngine {
             for (const index of indices) {
                 cells[index] = -1;
             }
+        },
+        moveCell(from: number, to: number): void {
+            cells[to] = cells[from];
+            cells[from] = -1;
         }
     }, columns);
 }
@@ -40,6 +44,10 @@ describe("BoardEngine", () => {
                 for (const index of indices) {
                     cells[index] = -1;
                 }
+            },
+            moveCell(from: number, to: number): void {
+                cells[to] = cells[from];
+                cells[from] = -1;
             }
         }, 2);
 
@@ -55,11 +63,12 @@ describe("BoardEngine", () => {
 
         assert.deepEqual(engine.processClick(0), {
             valid: true,
-            steps: [{ type: "remove", indices: [0, 1] }]
+            removedIndices: [0, 1],
+            moves: []
         });
         assert.deepEqual(cells, [-1, -1, 1]);
-        assert.deepEqual(engine.processClick(0), { valid: false, steps: [] });
-        assert.deepEqual(engine.processClick(2), { valid: false, steps: [] });
+        assert.deepEqual(engine.processClick(0), { valid: false, removedIndices: [], moves: [] });
+        assert.deepEqual(engine.processClick(2), { valid: false, removedIndices: [], moves: [] });
         assert.deepEqual(cells, [-1, -1, 1]);
     });
 
@@ -162,7 +171,7 @@ describe("BoardEngine removal with BoardModel", () => {
 
         const result = engine.processClick(4);
 
-        assert.deepEqual(result, { valid: false, steps: [] });
+        assert.deepEqual(result, { valid: false, removedIndices: [], moves: [] });
         assert.strictEqual(model.getCells(), cells);
         assert.deepEqual(cells, values);
     });
@@ -178,14 +187,13 @@ describe("BoardEngine removal with BoardModel", () => {
         const result = engine.processClick(0);
 
         assert.equal(result.valid, true);
-        assert.equal(result.steps.length, 1);
-        assert.equal(result.steps[0].type, "remove");
-        assert.deepEqual([...result.steps[0].indices].sort((a, b) => a - b), [0, 1, 4]);
+        assert.equal(result.moves.length, 3);
+        assert.deepEqual([...result.removedIndices].sort((a, b) => a - b), [0, 1, 4]);
         assert.strictEqual(model.getCells(), cells);
         assert.deepEqual(cells, [
-            -1, -1, 1, 2,
-            -1, 1, 2, 2,
-            3, 3, 0, 0
+            3, 1, 1, 2,
+            -1, 3, 2, 2,
+            -1, -1, 0, 0
         ]);
     });
 
@@ -196,27 +204,27 @@ describe("BoardEngine removal with BoardModel", () => {
             const result = engine.processClick(0);
 
             assert.equal(result.valid, true);
-            assert.deepEqual([...result.steps[0].indices].sort(), [0, 1]);
-            assert.deepEqual(model.getCells(), [-1, -1, -1, 2, 2]);
+            assert.deepEqual([...result.removedIndices].sort(), [0, 1]);
+            assert.deepEqual(model.getCells(), columns === 1 ? [2, 2, -1, -1, -1] : [-1, -1, -1, 2, 2]);
         });
     }
 
     it("ignores a repeated click and can remove another group at its original indices", () => {
         const { model, engine } = createBoard([0, 0, 1, 2, 2], 5);
         const firstResult = engine.processClick(0);
-        const firstIndices = firstResult.steps[0].indices.slice();
+        const firstIndices = firstResult.removedIndices.slice();
 
         const repeatedResult = engine.processClick(1);
 
-        assert.deepEqual(repeatedResult, { valid: false, steps: [] });
+        assert.deepEqual(repeatedResult, { valid: false, removedIndices: [], moves: [] });
         assert.deepEqual(model.getCells(), [-1, -1, 1, 2, 2]);
 
         const secondResult = engine.processClick(4);
 
         assert.equal(secondResult.valid, true);
-        assert.deepEqual([...secondResult.steps[0].indices].sort(), [3, 4]);
+        assert.deepEqual([...secondResult.removedIndices].sort(), [3, 4]);
         assert.deepEqual(model.getCells(), [-1, -1, 1, -1, -1]);
-        assert.deepEqual(firstResult.steps[0].indices, firstIndices);
+        assert.deepEqual(firstResult.removedIndices, firstIndices);
     });
 
     it("removes every cell of a uniform 8 by 8 board exactly once", () => {
@@ -225,13 +233,13 @@ describe("BoardEngine removal with BoardModel", () => {
         const result = engine.processClick(63);
 
         assert.equal(result.valid, true);
-        assert.equal(result.steps.length, 1);
+        assert.deepEqual(result.moves, []);
         assert.deepEqual(
-            [...result.steps[0].indices].sort((a, b) => a - b),
+            [...result.removedIndices].sort((a, b) => a - b),
             Array.from({ length: 64 }, (_, index) => index)
         );
         assert.deepEqual(model.getCells(), new Array<number>(64).fill(-1));
-        assert.deepEqual(engine.processClick(0), { valid: false, steps: [] });
+        assert.deepEqual(engine.processClick(0), { valid: false, removedIndices: [], moves: [] });
     });
 
     it("does not change the model for empty cells or invalid click indices", () => {
@@ -240,7 +248,7 @@ describe("BoardEngine removal with BoardModel", () => {
         const cells = model.getCells();
 
         for (const index of [0, -1, values.length, 0.5, NaN, Infinity]) {
-            assert.deepEqual(engine.processClick(index), { valid: false, steps: [] });
+            assert.deepEqual(engine.processClick(index), { valid: false, removedIndices: [], moves: [] });
             assert.strictEqual(model.getCells(), cells);
             assert.deepEqual(cells, values);
         }

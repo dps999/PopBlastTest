@@ -3,20 +3,20 @@ import { describe, it } from "node:test";
 import { BoardController } from "../assets/scripts/board/BoardController.ts";
 import { BoardModel } from "../assets/scripts/board/BoardModel.ts";
 import { BoardEngine } from "../assets/scripts/board/BoardEngine.ts";
-import type { RemoveStep } from "../assets/scripts/board/IBoardEngine.ts";
+import type { CellMove } from "../assets/scripts/board/IBoardEngine.ts";
 
 describe("BoardController", () => {
     it("processes the clicked cell synchronously", () => {
         const calls: string[] = [];
         let clickedIndex = -1;
         const controller = new BoardController(
-            { init(): void {}, getCells(): number[] { return []; }, removeCells(): void {} },
-            { initRender(): void {}, removeTiles(): void {} },
+            { init(): void {}, getCells(): number[] { return []; }, removeCells(): void {}, moveCell(): void {} },
+            { initRender(): void {}, removeTiles(): void {}, moveTiles(): void {} },
             {
                 processClick(index: number) {
                     clickedIndex = index;
                     calls.push("processClick");
-                    return { valid: false, steps: [] };
+                    return { valid: false, removedIndices: [], moves: [] };
                 }
             }
         );
@@ -40,7 +40,8 @@ describe("BoardController", () => {
                 calls.push("getCells");
                 return currentCells;
             },
-            removeCells(): void {}
+            removeCells(): void {},
+            moveCell(): void {}
         };
         const view = {
             initRender(renderedCells: number[]): void {
@@ -48,11 +49,12 @@ describe("BoardController", () => {
                 assert.strictEqual(renderedCells, cells);
                 assert.deepEqual(renderedCells, [2, 0, 1]);
             },
-            removeTiles(): void {}
+            removeTiles(): void {},
+            moveTiles(): void {}
         };
         const controller = new BoardController(model, view, {
             processClick() {
-                return { valid: false, steps: [] };
+                return { valid: false, removedIndices: [], moves: [] };
             }
         });
 
@@ -70,7 +72,8 @@ describe("BoardController", () => {
             initRender(cells: number[]): void {
                 renderedBoards.push(cells);
             },
-            removeTiles(): void {}
+            removeTiles(): void {},
+            moveTiles(): void {}
         }, new BoardEngine(model, 3));
 
         controller.init();
@@ -80,32 +83,38 @@ describe("BoardController", () => {
         assert.deepEqual(renderedBoards[0], [-1, -1, -1, -1, -1, -1]);
     });
 
-    it("forwards removal steps in order and ignores an invalid turn", () => {
-        const removals: number[][] = [];
-        const steps: RemoveStep[] = [
-            { type: "remove", indices: [0, 1] },
-            { type: "remove", indices: [4, 5] }
-        ];
+    it("removes tiles before moving them and ignores an invalid turn", () => {
+        const calls: string[] = [];
+        const removedIndices = [0, 1];
+        const moves: CellMove[] = [{ from: 3, to: 0 }, { from: 4, to: 1 }];
         const controller = new BoardController(
-            { init(): void {}, getCells(): number[] { return []; }, removeCells(): void {} },
+            { init(): void {}, getCells(): number[] { return []; }, removeCells(): void {}, moveCell(): void {} },
             {
                 initRender(): void {},
                 removeTiles(indices: number[]): void {
-                    removals.push(indices);
+                    assert.strictEqual(indices, removedIndices);
+                    calls.push("remove");
+                },
+                moveTiles(actualMoves: CellMove[]): void {
+                    assert.strictEqual(actualMoves, moves);
+                    calls.push("fall");
                 }
             },
             {
                 processClick(index: number) {
-                    return { valid: index === 0, steps };
+                    return { valid: index === 0, removedIndices, moves };
                 }
             }
         );
 
         controller.onCellClicked(0);
-        assert.deepEqual(removals, [[0, 1], [4, 5]]);
-        assert.strictEqual(removals[0], steps[0].indices);
+        assert.deepEqual(calls, ["remove", "fall"]);
+
+        moves.length = 0;
+        controller.onCellClicked(0);
+        assert.deepEqual(calls, ["remove", "fall", "remove", "fall"]);
 
         controller.onCellClicked(3);
-        assert.equal(removals.length, 2);
+        assert.equal(calls.length, 4);
     });
 });

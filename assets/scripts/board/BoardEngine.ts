@@ -1,4 +1,4 @@
-import type { IBoardEngine, TurnResult } from "./IBoardEngine";
+import type { CellMove, IBoardEngine, TurnResult } from "./IBoardEngine";
 import type { IBoardModel } from "./IBoardModel";
 
 /** Доменный сервис игровых правил поля. */
@@ -18,14 +18,37 @@ export class BoardEngine implements IBoardEngine {
         const matches = this.findGroup(index);
 
         if (matches.length < 2) {
-            return { valid: false, steps: [] };
+            return { valid: false, removedIndices: [], moves: [] };
         }
 
         this.model.removeCells(matches);
 
-        // Гравитация
+        const moves = this.applyGravity();
+
         // Заполнение
-        return { valid: true, steps: [{ type: "remove", indices: matches }] };
+        return { valid: true, removedIndices: matches, moves };
+    }
+
+    private applyGravity(): CellMove[] {
+        const cells = this.model.getCells();
+        const moves: CellMove[] = [];
+
+        for (let column = 0; column < this.columns; column++) {
+            let target = column;
+            for (let source = column; source < cells.length; source += this.columns) {
+                if (cells[source] < 0) {
+                    continue;
+                }
+
+                if (source !== target) {
+                    this.model.moveCell(source, target);
+                    moves.push({ from: source, to: target });
+                }
+                target += this.columns;
+            }
+        }
+
+        return moves;
     }
 
     public findGroup(index: number): number[] {

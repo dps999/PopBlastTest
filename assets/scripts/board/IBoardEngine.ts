@@ -1,11 +1,12 @@
-export interface RemoveStep {
-    type: "remove";
-    indices: number[];
+export interface CellMove {
+    from: number;
+    to: number;
 }
 
 export interface TurnResult {
     valid: boolean;
-    steps: RemoveStep[];
+    removedIndices: number[];
+    moves: CellMove[];
 }
 
 export interface IBoardEngine {

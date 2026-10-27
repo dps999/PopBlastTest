@@ -928,8 +928,8 @@
       "__type__": "TypedArray",
       "ctor": "Float64Array",
       "array": [
-        -207.384,
-        -237.064,
+        -220.417,
+        -229.824,
         0,
         0,
         0,
@@ -964,10 +964,10 @@
     "alignMode": 1,
     "_target": null,
     "_alignFlags": 12,
-    "_left": 69.65672398190046,
+    "_left": 56.62372398190044,
     "_right": 0,
     "_top": 0,
-    "_bottom": 112.85833287955867,
+    "_bottom": 120.09833287955865,
     "_verticalCenter": 0,
     "_horizontalCenter": 0,
     "_isAbsLeft": true,
@@ -997,7 +997,7 @@
     "tileSpacing": {
       "__type__": "cc.Size",
       "width": 4,
-      "height": 4
+      "height": -25
     },
     "_id": "2dd0P5fApBZZ8WzdSKhwJe"
   },
@@ -1145,7 +1145,7 @@
   },
   {
     "__type__": "GameConfig",
-    "boardRows": 8,
-    "boardColumns": 8
+    "boardRows": 5,
+    "boardColumns": 5
   }
 ]

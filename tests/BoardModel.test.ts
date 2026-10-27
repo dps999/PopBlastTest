@@ -3,6 +3,19 @@ import { describe, it } from "node:test";
 import { BoardModel } from "../assets/scripts/board/BoardModel.ts";
 
 describe("BoardModel", () => {
+    it("moves a cell into an empty position and clears its source", () => {
+        const model = new BoardModel(2, 2);
+        model.init();
+        const cells = model.getCells();
+        cells[1] = 2;
+        cells[3] = 0;
+
+        model.moveCell(3, 2);
+
+        assert.strictEqual(model.getCells(), cells);
+        assert.deepEqual(cells, [-1, 2, 0, -1]);
+    });
+
     it("marks only removed cells as empty while keeping the indices and array", () => {
         const model = new BoardModel(2, 3);
         model.init();

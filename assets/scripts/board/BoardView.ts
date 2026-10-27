@@ -3,6 +3,7 @@ import Tile from "../tiles/Tile";
 import { TilePool } from "../tiles/TilePool";
 import type { GameConfig } from "../core/GameConfig";
 import type { IBoardView } from "./IBoardView";
+import type { CellMove } from "./IBoardEngine";
 import { BoardInputService } from "./BoardInputService";
 
 export interface BoardViewDependencies {
@@ -23,7 +24,10 @@ export default class BoardView extends cc.Component implements IBoardView, IInit
     private initialPoint: cc.Node = null;
 
     @property({ tooltip: "Зазор между тайлами по X и Y." })
-    private tileSpacing: cc.Size = cc.size(4, 4);
+    private tileSpacing: cc.Size = cc.size(4, -25);
+
+    @property({ min: 0, tooltip: "Длительность падения тайлов в секундах." })
+    private fallDuration: number = 0.25;
 
     private tilePool: TilePool;
     private colorSprites: cc.SpriteFrame[];
@@ -33,6 +37,8 @@ export default class BoardView extends cc.Component implements IBoardView, IInit
     private tileSize: cc.Size = cc.size(0, 0);
     private lastTileSpacingX: number = NaN;
     private lastTileSpacingY: number = NaN;
+    private fallingTweens: cc.Tween[] = [];
+    private fallingCount: number = 0;
 
     public init(dependencies: BoardViewDependencies): void {
         this.tilePool = dependencies.tilePool;
@@ -68,6 +74,49 @@ export default class BoardView extends cc.Component implements IBoardView, IInit
         }
     }
 
+    public moveTiles(moves: CellMove[]): void {
+        if (this.fallingTweens.length > 0) {
+            this.refreshLayout();
+        }
+        if (moves.length === 0) {
+            return;
+        }
+
+        this.inputService.setEnabled(false);
+        this.fallingCount = moves.length;
+        for (const move of moves) {
+            const tile = this.tiles[move.from];
+            this.tiles[move.from] = null;
+            this.tiles[move.to] = tile;
+            this.inputService.bind(tile.sprite.node, move.to);
+
+            const tween = cc.tween(tile.node)
+                .to(this.fallDuration, { position: this.getTilePosition(move.to) }, { easing: "quadIn" })
+                .call(this.onFallComplete, this);
+            this.fallingTweens.push(tween);
+            tween.start();
+        }
+    }
+
+    private onFallComplete(): void {
+        this.fallingCount--;
+        if (this.fallingCount === 0) {
+            this.fallingTweens.length = 0;
+            this.inputService.setEnabled(true);
+        }
+    }
+
+    private stopFalling(): void {
+        for (const tween of this.fallingTweens) {
+            tween.stop();
+        }
+        this.fallingTweens.length = 0;
+        this.fallingCount = 0;
+        if (this.inputService) {
+            this.inputService.setEnabled(true);
+        }
+    }
+
     private getTileSizeFromBackground(): cc.Size {
         const backgroundNode = this.boardBackground.node;
         const spriteFrame = this.boardBackground.spriteFrame;
@@ -90,6 +139,7 @@ export default class BoardView extends cc.Component implements IBoardView, IInit
     }
 
     private refreshLayout(): void {
+        this.stopFalling();
         this.tileSize = this.getTileSizeFromBackground();
         this.alignInitialPointToBackground();
 
@@ -105,11 +155,15 @@ export default class BoardView extends cc.Component implements IBoardView, IInit
     }
 
     private layoutTile(tile: Tile, index: number): void {
-        const column = index % this.config.boardColumns;
-        const row = Math.floor(index / this.config.boardColumns);
         tile.setSize(this.tileSize);
         tile.node.parent = this.initialPoint;
-        tile.node.setPosition(
+        tile.node.setPosition(this.getTilePosition(index));
+    }
+
+    private getTilePosition(index: number): cc.Vec3 {
+        const column = index % this.config.boardColumns;
+        const row = Math.floor(index / this.config.boardColumns);
+        return cc.v3(
             column * (this.tileSize.width + this.tileSpacing.width),
             row * (this.tileSize.height + this.tileSpacing.height)
         );
@@ -164,6 +218,7 @@ export default class BoardView extends cc.Component implements IBoardView, IInit
     }
 
     protected onDestroy(): void {
+        this.stopFalling();
         if (this.inputService) {
             this.inputService.dispose();
         }

@@ -3,6 +3,7 @@ import type { IBoardController } from "./IBoardController";
 export class BoardInputService {
     private readonly controller: IBoardController;
     private readonly handlers: Map<cc.Node, () => void> = new Map();
+    private enabled: boolean = true;
 
     constructor(controller: IBoardController) {
         this.controller = controller;
@@ -11,6 +12,9 @@ export class BoardInputService {
     public bind(node: cc.Node, index: number): void {
         this.unbind(node);
         const handler = (): void => {
+            if (!this.enabled) {
+                return;
+            }
             try {
                 this.controller.onCellClicked(index);
             } catch (error) {
@@ -27,6 +31,10 @@ export class BoardInputService {
             node.off(cc.Node.EventType.TOUCH_END, handler);
             this.handlers.delete(node);
         }
+    }
+
+    public setEnabled(enabled: boolean): void {
+        this.enabled = enabled;
     }
 
     public dispose(): void {

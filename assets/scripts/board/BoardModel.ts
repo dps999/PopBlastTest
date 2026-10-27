@@ -23,4 +23,9 @@ export class BoardModel implements IBoardModel {
             this.cells[index] = -1;
         }
     }
+
+    public moveCell(from: number, to: number): void {
+        this.cells[to] = this.cells[from];
+        this.cells[from] = -1;
+    }
 }
