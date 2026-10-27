@@ -45,6 +45,7 @@ export default class BoardView extends cc.Component implements IBoardView, IInit
         this.colorSprites = dependencies.colorSprites;
         this.config = dependencies.config;
         this.inputService = dependencies.inputService;
+        this.fallingTweens = new Array<cc.Tween>(this.config.boardRows * this.config.boardColumns).fill(null);
         this.refreshLayout();
     }
 
@@ -76,7 +77,7 @@ export default class BoardView extends cc.Component implements IBoardView, IInit
     }
 
     public moveTiles(moves: CellMove[], count: number): void {
-        if (this.fallingTweens.length > 0) {
+        if (this.fallingCount > 0) {
             this.refreshLayout();
         }
         if (count === 0) {
@@ -95,7 +96,7 @@ export default class BoardView extends cc.Component implements IBoardView, IInit
             const tween = cc.tween(tile.node)
                 .to(this.fallDuration, { position: this.getTilePosition(move.to) }, { easing: "quadIn" })
                 .call(this.onFallComplete, this);
-            this.fallingTweens.push(tween);
+            this.fallingTweens[i] = tween;
             tween.start();
         }
     }
@@ -103,16 +104,18 @@ export default class BoardView extends cc.Component implements IBoardView, IInit
     private onFallComplete(): void {
         this.fallingCount--;
         if (this.fallingCount === 0) {
-            this.fallingTweens.length = 0;
+            this.fallingTweens.fill(null);
             this.inputService.setEnabled(true);
         }
     }
 
     private stopFalling(): void {
         for (const tween of this.fallingTweens) {
-            tween.stop();
+            if (tween) {
+                tween.stop();
+            }
         }
-        this.fallingTweens.length = 0;
+        this.fallingTweens.fill(null);
         this.fallingCount = 0;
         if (this.inputService) {
             this.inputService.setEnabled(true);
