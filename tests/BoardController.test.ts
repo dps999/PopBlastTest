@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { BoardController } from "../assets/scripts/board/BoardController.ts";
 import { BoardModel } from "../assets/scripts/board/BoardModel.ts";
+import { BoardEngine } from "../assets/scripts/board/BoardEngine.ts";
 
 describe("BoardController", () => {
     it("initializes the model before reading cells and rendering exactly once", () => {
@@ -25,7 +26,7 @@ describe("BoardController", () => {
                 assert.deepEqual(renderedCells, [2, 0, 1]);
             }
         };
-        const controller = new BoardController(model, view);
+        const controller = new BoardController(model, view, new BoardEngine());
 
         assert.deepEqual(calls, []);
 
@@ -41,7 +42,7 @@ describe("BoardController", () => {
             initRender(cells: number[]): void {
                 renderedBoards.push(cells);
             }
-        });
+        }, new BoardEngine());
 
         controller.init();
 

@@ -1,10 +1,17 @@
+import type { IBoardController } from "./IBoardController";
+
 export class BoardInputService {
+    private readonly controller: IBoardController;
     private readonly handlers: Map<cc.Node, () => void> = new Map();
+
+    constructor(controller: IBoardController) {
+        this.controller = controller;
+    }
 
     public bind(node: cc.Node, index: number): void {
         this.unbind(node);
         const handler = (): void => {
-            cc.log("Нажатие на ячейку:", index);
+            this.controller.onCellClicked(index);
         };
         node.on(cc.Node.EventType.TOUCH_END, handler);
         this.handlers.set(node, handler);

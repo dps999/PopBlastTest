@@ -4,6 +4,7 @@ import BoardView from "../board/BoardView";
 import { TilePool } from "../tiles/TilePool";
 import type { GameConfig } from "./GameConfig";
 import { BoardInputService } from "../board/BoardInputService";
+import { BoardEngine } from "../board/BoardEngine";
 
 /** Компонент, которому фабрика передаёт зависимости после создания Cocos. */
 export interface IInitializable<TDependencies> {
@@ -20,14 +21,15 @@ export class GameFactory {
     ): BoardController {
         const model = new BoardModel(config.boardRows, config.boardColumns);
         const tilePool = new TilePool(tilePrefab);
-        const inputService = new BoardInputService();
+        const engine = new BoardEngine();
+        const controller = new BoardController(model, view, engine);
+        const inputService = new BoardInputService(controller);
         view.init({
             tilePool,
             colorSprites,
             config,
             inputService
         });
-        const controller = new BoardController(model, view);
         controller.init();
         return controller;
     }
