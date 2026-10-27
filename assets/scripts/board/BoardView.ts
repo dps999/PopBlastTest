@@ -26,8 +26,8 @@ export default class BoardView extends cc.Component implements IBoardView, IInit
     @property({ tooltip: "Зазор между тайлами по X и Y." })
     private tileSpacing: cc.Size = cc.size(4, -25);
 
-    @property({ min: 0, tooltip: "Длительность падения тайлов в секундах." })
-    private fallDuration: number = 0.25;
+    @property({ min: 1, tooltip: "Скорость падения в локальных единицах поля в секунду." })
+    private fallSpeed: number = 800;
 
     private tilePool: TilePool;
     private colorSprites: cc.SpriteFrame[];
@@ -93,8 +93,10 @@ export default class BoardView extends cc.Component implements IBoardView, IInit
             this.tiles[move.to] = tile;
             this.inputService.bind(tile.sprite.node, move.to);
 
+            const position = this.getTilePosition(move.to);
+            const duration = Math.abs(position.y - tile.node.y) / this.fallSpeed;
             const tween = cc.tween(tile.node)
-                .to(this.fallDuration, { position: this.getTilePosition(move.to) }, { easing: "quadIn" })
+                .to(duration, { position })
                 .call(this.onFallComplete, this);
             this.fallingTweens[i] = tween;
             tween.start();
