@@ -1,6 +1,6 @@
-import type { GameState, IGameModel } from "./GamePresenter";
+import type {GameState, IGameModel, IGameState} from "./GamePresenter";
 
-export class GameModel implements IGameModel {
+export class GameModel implements IGameModel, IGameState {
     private movesLeft: number;
     private score: number;
 
@@ -19,10 +19,15 @@ export class GameModel implements IGameModel {
         this.score += points;
     }
 
+    public getMovesLeft(): number {
+        return this.movesLeft;
+    }
+
+    public getScore(): number {
+        return this.score;
+    }
+
     public getState(): GameState {
-        return {
-            getMovesLeft: () => this.movesLeft,
-            getScore: () => this.score
-        };
+        return this;
     }
 }

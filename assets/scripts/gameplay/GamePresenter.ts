@@ -1,4 +1,4 @@
-export interface GameState{
+export interface IGameState{
     getMovesLeft(): number;
     getScore(): number;
 }
@@ -6,11 +6,11 @@ export interface GameState{
 export interface IGameModel{
     spendMove(): void;
     addScore(points: number): void;
-    getState() : GameState;
+    getState() : IGameState;
 }
 
 export interface IGameView{
-    render(state: GameState): void;
+    render(state: IGameState): void;
 }
 
 export class GamePresenter{
