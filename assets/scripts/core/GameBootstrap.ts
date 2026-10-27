@@ -1,10 +1,14 @@
 import BoardView from "../board/BoardView";
+import { GameConfig } from "./GameConfig";
 import { GameFactory } from "./GameFactory";
 
 const { ccclass, property } = cc._decorator;
 
 @ccclass
 export default class GameBootstrap extends cc.Component {
+    @property(GameConfig)
+    private config: GameConfig = new GameConfig();
+
     @property(BoardView)
     private boardView: BoardView = null;
 
