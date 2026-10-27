@@ -3,7 +3,7 @@ export interface IBoardModel {
 
     getCells(): number[];
 
-    removeCells(indices: number[]): void;
+    removeCells(indices: number[], count: number): void;
 
     moveCell(from: number, to: number): void;
 }

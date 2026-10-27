@@ -22,7 +22,7 @@ describe("BoardModel", () => {
         const cells = model.getCells();
         cells.splice(0, cells.length, 0, 1, 2, 3, 4, 0);
 
-        model.removeCells([1, 4]);
+        model.removeCells([1, 4, 0, 2, 3, 5], 2);
 
         assert.strictEqual(model.getCells(), cells);
         assert.deepEqual(cells, [0, -1, 2, 3, -1, 0]);
@@ -36,7 +36,7 @@ describe("BoardModel", () => {
         cells[1] = 1;
         cells[2] = 2;
 
-        model.removeCells([]);
+        model.removeCells([0, 1, 2], 0);
 
         assert.strictEqual(model.getCells(), cells);
         assert.deepEqual(cells, [0, 1, 2]);
@@ -50,8 +50,8 @@ describe("BoardModel", () => {
         cells[1] = 1;
         cells[2] = 2;
 
-        model.removeCells([0, 0, 2]);
-        model.removeCells([0, 2]);
+        model.removeCells([0, 0, 2], 3);
+        model.removeCells([0, 2], 2);
 
         assert.strictEqual(model.getCells(), cells);
         assert.deepEqual(cells, [-1, 1, -1]);

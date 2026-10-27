@@ -25,7 +25,7 @@ export class BoardController implements IBoardController {
             return;
         }
 
-        this.view.removeTiles(result.removedIndices);
+        this.view.removeTiles(result.removedIndices, result.matchCount);
         this.view.moveTiles(result.moves, result.moveCount);
     }
 }

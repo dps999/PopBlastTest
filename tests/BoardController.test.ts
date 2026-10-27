@@ -16,7 +16,7 @@ describe("BoardController", () => {
                 processClick(index: number) {
                     clickedIndex = index;
                     calls.push("processClick");
-                    return { valid: false, removedIndices: [], moves: [], moveCount: 0 };
+                    return { valid: false, removedIndices: [], matchCount: 0, moves: [], moveCount: 0 };
                 }
             }
         );
@@ -54,7 +54,7 @@ describe("BoardController", () => {
         };
         const controller = new BoardController(model, view, {
             processClick() {
-                return { valid: false, removedIndices: [], moves: [], moveCount: 0 };
+                return { valid: false, removedIndices: [], matchCount: 0, moves: [], moveCount: 0 };
             }
         });
 
@@ -85,15 +85,17 @@ describe("BoardController", () => {
 
     it("removes tiles before moving them and ignores an invalid turn", () => {
         const calls: string[] = [];
-        const removedIndices = [0, 1];
+        const removedIndices = [0, 1, 4, 5];
+        const matchCount = 2;
         const moves: CellMove[] = [{ from: 3, to: 0 }, { from: 4, to: 1 }];
         let moveCount = 2;
         const controller = new BoardController(
             { init(): void {}, getCells(): number[] { return []; }, removeCells(): void {}, moveCell(): void {} },
             {
                 initRender(): void {},
-                removeTiles(indices: number[]): void {
+                removeTiles(indices: number[], count: number): void {
                     assert.strictEqual(indices, removedIndices);
+                    assert.equal(count, matchCount);
                     calls.push("remove");
                 },
                 moveTiles(actualMoves: CellMove[], count: number): void {
@@ -104,7 +106,7 @@ describe("BoardController", () => {
             },
             {
                 processClick(index: number) {
-                    return { valid: index === 0, removedIndices, moves, moveCount };
+                    return { valid: index === 0, removedIndices, matchCount, moves, moveCount };
                 }
             }
         );

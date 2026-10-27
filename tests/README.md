@@ -35,6 +35,10 @@ Moves are an ordinary array with fixed capacity. Its objects are allocated once,
 then updated by index; only the first `moveCount` entries belong to the current
 click. Tests verify that the array length and object references do not change
 between clicks, including invalid clicks.
+Matches also use one fixed-length ordinary array and a local `matchCount`.
+`findGroup` writes into a supplied preallocated array and returns the count.
+Removal consumes only the first `matchCount` entries; tests verify that stale
+entries from a larger previous group never remove extra cells.
 
 `BoardInputService.test.ts` uses a small Cocos event stub to verify that clicks are
 ignored during falling, enabling input uses the current cell index, and unbinding

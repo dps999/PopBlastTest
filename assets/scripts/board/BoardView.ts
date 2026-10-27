@@ -61,8 +61,9 @@ export default class BoardView extends cc.Component implements IBoardView, IInit
         }
     }
 
-    public removeTiles(indices: number[]): void {
-        for (const index of indices) {
+    public removeTiles(indices: number[], count: number): void {
+        for (let i = 0; i < count; i++) {
+            const index = indices[i];
             const tile = this.tiles[index];
             if (!tile) {
                 continue;

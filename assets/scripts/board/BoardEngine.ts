@@ -6,6 +6,7 @@ export class BoardEngine implements IBoardEngine {
     private readonly model: IBoardModel;
     private readonly columns: number;
     private readonly moves: CellMove[];
+    private readonly matches: number[];
 
     private visited: Uint8Array;
 
@@ -13,6 +14,7 @@ export class BoardEngine implements IBoardEngine {
         this.model = model;
         this.columns = columns;
         this.visited = new Uint8Array(model.getCells().length);
+        this.matches = new Array<number>(capacity).fill(0);
         this.moves = new Array<CellMove>(capacity);
         for (let i = 0; i < capacity; i++) {
             this.moves[i] = { from: 0, to: 0 };
@@ -20,18 +22,18 @@ export class BoardEngine implements IBoardEngine {
     }
 
     public processClick(index: number): TurnResult {
-        const matches = this.findGroup(index);
+        const matchCount = this.findGroup(index, this.matches);
 
-        if (matches.length < 2) {
-            return { valid: false, removedIndices: [], moves: this.moves, moveCount: 0 };
+        if (matchCount < 2) {
+            return { valid: false, removedIndices: this.matches, matchCount: 0, moves: this.moves, moveCount: 0 };
         }
 
-        this.model.removeCells(matches);
+        this.model.removeCells(this.matches, matchCount);
 
         const moveCount = this.applyGravity();
 
         // Заполнение
-        return { valid: true, removedIndices: matches, moves: this.moves, moveCount };
+        return { valid: true, removedIndices: this.matches, matchCount, moves: this.moves, moveCount };
     }
 
     private applyGravity(): number {
@@ -57,15 +59,16 @@ export class BoardEngine implements IBoardEngine {
         return moveCount;
     }
 
-    public findGroup(index: number): number[] {
+    /** Заполняет заранее выделенный массив и возвращает количество найденных индексов. */
+    public findGroup(index: number, matches: number[]): number {
         const cells = this.model.getCells();
 
         if (!Number.isInteger(index) || index < 0 || index >= cells.length || cells[index] < 0) {
-            return [];
+            return 0;
         }
 
         const color = cells[index];
-        const matches: number[] = [];
+        let matchCount = 0;
         if (this.visited.length !== cells.length) {
             this.visited = new Uint8Array(cells.length);
         } else {
@@ -79,7 +82,7 @@ export class BoardEngine implements IBoardEngine {
                 return;
 
             visited[i] = 1;
-            matches.push(i);
+            matches[matchCount++] = i;
 
             const x = i % this.columns;
 
@@ -92,6 +95,6 @@ export class BoardEngine implements IBoardEngine {
 
         visit(index);
 
-        return matches.length >= 2 ? matches : [];
+        return matchCount >= 2 ? matchCount : 0;
     }
 }

@@ -21,7 +21,7 @@ describe("BoardEngine gravity", () => {
         const result = engine.processClick(0);
 
         assert.deepEqual(model.getCells(), [2, 3, 4, -1, -1]);
-        assert.deepEqual(result.removedIndices, [0, 1]);
+        assert.deepEqual(result.removedIndices.slice(0, result.matchCount), [0, 1]);
         assert.deepEqual(result.moves.slice(0, result.moveCount), [{ from: 2, to: 0 }, { from: 3, to: 1 }, { from: 4, to: 2 }]);
     });
 
@@ -52,7 +52,7 @@ describe("BoardEngine gravity", () => {
         const result = engine.processClick(3);
 
         assert.deepEqual(model.getCells(), [0, 1, -1, -1]);
-        assert.deepEqual(result.removedIndices, [3, 2]);
+        assert.deepEqual(result.removedIndices.slice(0, result.matchCount), [3, 2]);
         assert.equal(result.moveCount, 0);
     });
 
@@ -85,7 +85,7 @@ describe("BoardEngine gravity", () => {
         const result = engine.processClick(1);
 
         assert.equal(result.valid, true);
-        assert.deepEqual(result.removedIndices, [1, 2]);
+        assert.deepEqual(result.removedIndices.slice(0, result.matchCount), [1, 2]);
         assert.deepEqual(model.getCells(), [2, -1, -1, -1, -1]);
     });
 
@@ -100,8 +100,8 @@ describe("BoardEngine gravity", () => {
         const result = engine.processClick(0);
         const replay = values.slice();
 
-        for (const index of result.removedIndices) {
-            replay[index] = -1;
+        for (let i = 0; i < result.matchCount; i++) {
+            replay[result.removedIndices[i]] = -1;
         }
         for (let i = 0; i < result.moveCount; i++) {
             const move = result.moves[i];

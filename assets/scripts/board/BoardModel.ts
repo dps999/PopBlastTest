@@ -18,9 +18,9 @@ export class BoardModel implements IBoardModel {
         return this.cells;
     }
 
-    public removeCells(indices: number[]): void {
-        for (const index of indices) {
-            this.cells[index] = -1;
+    public removeCells(indices: number[], count: number): void {
+        for (let i = 0; i < count; i++) {
+            this.cells[indices[i]] = -1;
         }
     }
 
