@@ -15,7 +15,10 @@ The `tests` directory is excluded from the Cocos TypeScript configuration becaus
 these files use Node.js APIs and are not game assets.
 
 The suite covers `GameModel`, the initial state and instance isolation of
-`BoardModel`, and `BoardController` initialization order and cell forwarding.
+`BoardModel`, and `BoardController` initialization order: model initialization,
+color generation through `SpawnService`, and forwarding the generated cells to the view.
+`SpawnService.test.ts` verifies filling empty cells, preserving existing colors and
+indices, both palette boundaries, repeated calls, and an empty board.
 `BoardController` also verifies synchronous click processing, removal followed by
 movement (including an empty movement list), and ignoring invalid turns. `BoardModel` verifies that removal preserves
 cell indices and the original array.
@@ -45,7 +48,7 @@ ignored during falling, enabling input uses the current cell index, and unbindin
 or disposal removes only the service's subscriptions.
 
 Refill has one `todo` specification: every empty cell must receive an integer color
-index in `[0, colorCount)`. Refill is not implemented yet, so this is not a passing
+index in `[0, colorCount)`. Refill is not integrated into turn processing yet, so this is not a passing
 coverage check. A complete turn including refill is outside the current test scope.
 
 Rendering in `BoardView` requires the Cocos runtime and is not covered by this Node.js suite.

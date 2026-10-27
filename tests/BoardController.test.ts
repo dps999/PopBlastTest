@@ -4,6 +4,16 @@ import { BoardController } from "../assets/scripts/board/BoardController.ts";
 import { BoardModel } from "../assets/scripts/board/BoardModel.ts";
 import { BoardEngine } from "../assets/scripts/board/BoardEngine.ts";
 import type { CellMove } from "../assets/scripts/board/IBoardEngine.ts";
+import { SpawnService } from "../assets/scripts/board/SpawnService.ts";
+
+function lowestInteger(min: number, _max: number): number {
+    return min;
+}
+
+Object.defineProperty(globalThis, "cc", {
+    configurable: true,
+    value: { randomRangeInt: lowestInteger }
+});
 
 describe("BoardController", () => {
     it("processes the clicked cell synchronously", () => {
@@ -18,7 +28,8 @@ describe("BoardController", () => {
                     calls.push("processClick");
                     return { valid: false, removedIndices: [], matchCount: 0, moves: [], moveCount: 0 };
                 }
-            }
+            },
+            new SpawnService(1)
         );
         controller.onCellClicked(12);
         calls.push("returned");
@@ -27,9 +38,9 @@ describe("BoardController", () => {
         assert.deepEqual(calls, ["processClick", "returned"]);
     });
 
-    it("initializes the model before reading cells and rendering exactly once", () => {
+    it("initializes the model and spawns colors before rendering exactly once", () => {
         const calls: string[] = [];
-        const cells = [2, 0, 1];
+        const cells = [-1, -1, -1];
         let currentCells: number[] = [];
         const model = {
             init(): void {
@@ -44,7 +55,7 @@ describe("BoardController", () => {
             moveCell(): void {}
         };
         const view = {
-            initRender(renderedCells: number[]): void {
+            initRender(renderedCells: ReadonlyArray<number>): void {
                 calls.push("initRender");
                 assert.strictEqual(renderedCells, cells);
                 assert.deepEqual(renderedCells, [2, 0, 1]);
@@ -56,31 +67,40 @@ describe("BoardController", () => {
             processClick() {
                 return { valid: false, removedIndices: [], matchCount: 0, moves: [], moveCount: 0 };
             }
+        }, {
+            spawn(spawnedCells: number[]): void {
+                calls[calls.length] = "spawn";
+                assert.strictEqual(spawnedCells, cells);
+                assert.deepEqual(spawnedCells, [-1, -1, -1]);
+                spawnedCells[0] = 2;
+                spawnedCells[1] = 0;
+                spawnedCells[2] = 1;
+            }
         });
 
         assert.deepEqual(calls, []);
 
         controller.init();
 
-        assert.deepEqual(calls, ["init", "getCells", "initRender"]);
+        assert.deepEqual(calls, ["init", "getCells", "spawn", "initRender"]);
     });
 
     it("renders the configured board supplied by BoardModel", () => {
         const model = new BoardModel(2, 3);
-        const renderedBoards: number[][] = [];
+        const renderedBoards: ReadonlyArray<number>[] = [];
         const controller = new BoardController(model, {
-            initRender(cells: number[]): void {
-                renderedBoards.push(cells);
+            initRender(cells: ReadonlyArray<number>): void {
+                renderedBoards[renderedBoards.length] = cells;
             },
             removeTiles(): void {},
             moveTiles(): void {}
-        }, new BoardEngine(model, 3, 6));
+        }, new BoardEngine(model, 3, 6), new SpawnService(1));
 
         controller.init();
 
         assert.equal(renderedBoards.length, 1);
         assert.strictEqual(renderedBoards[0], model.getCells());
-        assert.deepEqual(renderedBoards[0], [-1, -1, -1, -1, -1, -1]);
+        assert.deepEqual(renderedBoards[0], [0, 0, 0, 0, 0, 0]);
     });
 
     it("removes tiles before moving them and ignores an invalid turn", () => {
@@ -108,7 +128,8 @@ describe("BoardController", () => {
                 processClick(index: number) {
                     return { valid: index === 0, removedIndices, matchCount, moves, moveCount };
                 }
-            }
+            },
+            new SpawnService(1)
         );
 
         controller.onCellClicked(0);

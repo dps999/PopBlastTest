@@ -5,6 +5,7 @@ import { TilePool } from "../tiles/TilePool";
 import type { GameConfig } from "./GameConfig";
 import { BoardInputService } from "../board/BoardInputService";
 import { BoardEngine } from "../board/BoardEngine";
+import { SpawnService } from "../board/SpawnService";
 
 /** Компонент, которому фабрика передаёт зависимости после создания Cocos. */
 export interface IInitializable<TDependencies> {
@@ -22,7 +23,8 @@ export class GameFactory {
         const model = new BoardModel(config.boardRows, config.boardColumns);
         const tilePool = new TilePool(tilePrefab);
         const engine = new BoardEngine(model, config.boardColumns, config.boardRows * config.boardColumns);
-        const controller = new BoardController(model, view, engine);
+        const spawnService = new SpawnService(colorSprites.length);
+        const controller = new BoardController(model, view, engine, spawnService);
         const inputService = new BoardInputService(controller);
         view.init({
             tilePool,

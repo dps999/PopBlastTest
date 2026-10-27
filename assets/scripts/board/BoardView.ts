@@ -26,6 +26,9 @@ export default class BoardView extends cc.Component implements IBoardView, IInit
     @property({ tooltip: "Зазор между тайлами по X и Y." })
     private tileSpacing: cc.Size = cc.size(4, -25);
 
+    @property({ min: 1, max: 1.25, tooltip: "Насколько клетки заполняют внутреннюю область рамки." })
+    private tileFillFactor: number = 1.12;
+
     @property({ min: 1, tooltip: "Скорость падения в локальных единицах поля в секунду." })
     private fallSpeed: number = 800;
 
@@ -50,15 +53,16 @@ export default class BoardView extends cc.Component implements IBoardView, IInit
     }
 
     public initRender(cells: number[]): void {
+        this.tiles = new Array<Tile>(cells.length).fill(null);
         for (let i = 0; i < cells.length; i++) {
             if (cells[i] === -1) {
-                cells[i] = Math.floor(Math.random() * this.colorSprites.length);
+                continue;
             }
             const tile = this.tilePool.get();
             tile.setSprite(this.colorSprites[cells[i]]);
             this.layoutTile(tile, i);
             this.inputService.bind(tile.sprite.node, i);
-            this.tiles.push(tile);
+            this.tiles[i] = tile;
         }
     }
 
@@ -137,7 +141,7 @@ export default class BoardView extends cc.Component implements IBoardView, IInit
         const tileScale = Math.max(0, Math.min(
             availableWidth / (originalTileSize.width * this.config.boardColumns),
             availableHeight / (originalTileSize.height * this.config.boardRows)
-        ));
+        )) * this.tileFillFactor;
 
         return cc.size(
             originalTileSize.width * tileScale,
