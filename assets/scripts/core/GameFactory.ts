@@ -21,7 +21,7 @@ export class GameFactory {
     ): BoardController {
         const model = new BoardModel(config.boardRows, config.boardColumns);
         const tilePool = new TilePool(tilePrefab);
-        const engine = new BoardEngine(model, config.boardColumns);
+        const engine = new BoardEngine(model, config.boardColumns, config.boardRows * config.boardColumns);
         const controller = new BoardController(model, view, engine);
         const inputService = new BoardInputService(controller);
         view.init({

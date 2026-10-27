@@ -5,5 +5,5 @@ export interface IBoardView {
 
     removeTiles(indices: number[]): void;
 
-    moveTiles(moves: CellMove[]): void;
+    moveTiles(moves: CellMove[], count: number): void;
 }

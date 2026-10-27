@@ -74,17 +74,18 @@ export default class BoardView extends cc.Component implements IBoardView, IInit
         }
     }
 
-    public moveTiles(moves: CellMove[]): void {
+    public moveTiles(moves: CellMove[], count: number): void {
         if (this.fallingTweens.length > 0) {
             this.refreshLayout();
         }
-        if (moves.length === 0) {
+        if (count === 0) {
             return;
         }
 
         this.inputService.setEnabled(false);
-        this.fallingCount = moves.length;
-        for (const move of moves) {
+        this.fallingCount = count;
+        for (let i = 0; i < count; i++) {
+            const move = moves[i];
             const tile = this.tiles[move.from];
             this.tiles[move.from] = null;
             this.tiles[move.to] = tile;

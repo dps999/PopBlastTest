@@ -16,7 +16,7 @@ describe("BoardController", () => {
                 processClick(index: number) {
                     clickedIndex = index;
                     calls.push("processClick");
-                    return { valid: false, removedIndices: [], moves: [] };
+                    return { valid: false, removedIndices: [], moves: [], moveCount: 0 };
                 }
             }
         );
@@ -54,7 +54,7 @@ describe("BoardController", () => {
         };
         const controller = new BoardController(model, view, {
             processClick() {
-                return { valid: false, removedIndices: [], moves: [] };
+                return { valid: false, removedIndices: [], moves: [], moveCount: 0 };
             }
         });
 
@@ -74,7 +74,7 @@ describe("BoardController", () => {
             },
             removeTiles(): void {},
             moveTiles(): void {}
-        }, new BoardEngine(model, 3));
+        }, new BoardEngine(model, 3, 6));
 
         controller.init();
 
@@ -87,6 +87,7 @@ describe("BoardController", () => {
         const calls: string[] = [];
         const removedIndices = [0, 1];
         const moves: CellMove[] = [{ from: 3, to: 0 }, { from: 4, to: 1 }];
+        let moveCount = 2;
         const controller = new BoardController(
             { init(): void {}, getCells(): number[] { return []; }, removeCells(): void {}, moveCell(): void {} },
             {
@@ -95,14 +96,15 @@ describe("BoardController", () => {
                     assert.strictEqual(indices, removedIndices);
                     calls.push("remove");
                 },
-                moveTiles(actualMoves: CellMove[]): void {
+                moveTiles(actualMoves: CellMove[], count: number): void {
                     assert.strictEqual(actualMoves, moves);
+                    assert.equal(count, moveCount);
                     calls.push("fall");
                 }
             },
             {
                 processClick(index: number) {
-                    return { valid: index === 0, removedIndices, moves };
+                    return { valid: index === 0, removedIndices, moves, moveCount };
                 }
             }
         );
@@ -110,11 +112,12 @@ describe("BoardController", () => {
         controller.onCellClicked(0);
         assert.deepEqual(calls, ["remove", "fall"]);
 
-        moves.length = 0;
+        moveCount = 0;
         controller.onCellClicked(0);
         assert.deepEqual(calls, ["remove", "fall", "remove", "fall"]);
 
         controller.onCellClicked(3);
         assert.equal(calls.length, 4);
+        assert.equal(moves.length, 2);
     });
 });

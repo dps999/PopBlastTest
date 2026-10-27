@@ -31,6 +31,10 @@ Model tests include empty removal lists, duplicate indices, and repeated removal
 `BoardGravity.test.ts` covers falling towards row zero, stable column order,
 independent columns, multiple holes, color zero, empty columns, clicks after falling,
 and applying removed indices followed by moves to obtain the final model state.
+Moves are an ordinary array with fixed capacity. Its objects are allocated once,
+then updated by index; only the first `moveCount` entries belong to the current
+click. Tests verify that the array length and object references do not change
+between clicks, including invalid clicks.
 
 `BoardInputService.test.ts` uses a small Cocos event stub to verify that clicks are
 ignored during falling, enabling input uses the current cell index, and unbinding

@@ -5,33 +5,38 @@ import type { IBoardModel } from "./IBoardModel";
 export class BoardEngine implements IBoardEngine {
     private readonly model: IBoardModel;
     private readonly columns: number;
+    private readonly moves: CellMove[];
 
     private visited: Uint8Array;
 
-    constructor(model: IBoardModel, columns: number) {
+    constructor(model: IBoardModel, columns: number, capacity: number) {
         this.model = model;
         this.columns = columns;
         this.visited = new Uint8Array(model.getCells().length);
+        this.moves = new Array<CellMove>(capacity);
+        for (let i = 0; i < capacity; i++) {
+            this.moves[i] = { from: 0, to: 0 };
+        }
     }
 
     public processClick(index: number): TurnResult {
         const matches = this.findGroup(index);
 
         if (matches.length < 2) {
-            return { valid: false, removedIndices: [], moves: [] };
+            return { valid: false, removedIndices: [], moves: this.moves, moveCount: 0 };
         }
 
         this.model.removeCells(matches);
 
-        const moves = this.applyGravity();
+        const moveCount = this.applyGravity();
 
         // Заполнение
-        return { valid: true, removedIndices: matches, moves };
+        return { valid: true, removedIndices: matches, moves: this.moves, moveCount };
     }
 
-    private applyGravity(): CellMove[] {
+    private applyGravity(): number {
         const cells = this.model.getCells();
-        const moves: CellMove[] = [];
+        let moveCount = 0;
 
         for (let column = 0; column < this.columns; column++) {
             let target = column;
@@ -42,13 +47,14 @@ export class BoardEngine implements IBoardEngine {
 
                 if (source !== target) {
                     this.model.moveCell(source, target);
-                    moves.push({ from: source, to: target });
+                    const move = this.moves[moveCount++];
+                    move.from = source;
+                    move.to = target;
                 }
                 target += this.columns;
             }
         }
-
-        return moves;
+        return moveCount;
     }
 
     public findGroup(index: number): number[] {
