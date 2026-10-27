@@ -47,6 +47,6 @@ describe("BoardController", () => {
 
         assert.equal(renderedBoards.length, 1);
         assert.strictEqual(renderedBoards[0], model.getCells());
-        assert.deepEqual(renderedBoards[0], [0, 0, 0, 0, 0, 0]);
+        assert.deepEqual(renderedBoards[0], [-1, -1, -1, -1, -1, -1]);
     });
 });

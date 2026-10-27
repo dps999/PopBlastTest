@@ -9,12 +9,12 @@ describe("BoardModel", () => {
         assert.deepEqual(model.getCells(), []);
     });
 
-    it("initializes all cells for the configured rows and columns with color zero", () => {
+    it("initializes all cells for the configured rows and columns with minus one", () => {
         const model = new BoardModel(2, 3);
 
         model.init();
 
-        assert.deepEqual(model.getCells(), [0, 0, 0, 0, 0, 0]);
+        assert.deepEqual(model.getCells(), [-1, -1, -1, -1, -1, -1]);
     });
 
     it("keeps cells separate between model instances", () => {
@@ -26,6 +26,6 @@ describe("BoardModel", () => {
 
         assert.notStrictEqual(first.getCells(), second.getCells());
         first.getCells()[0] = 4;
-        assert.equal(second.getCells()[0], 0);
+        assert.equal(second.getCells()[0], -1);
     });
 });

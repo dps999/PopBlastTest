@@ -1,5 +1,5 @@
-import {IBoardView} from "./IBoardView";
-import {IBoardModel} from "./IBoardModel";
+import type { IBoardView } from "./IBoardView";
+import type { IBoardModel } from "./IBoardModel";
 
 export class BoardController {
     private readonly model: IBoardModel;

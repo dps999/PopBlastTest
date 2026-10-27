@@ -1,4 +1,4 @@
-import {IBoardModel} from "./IBoardModel";
+import type { IBoardModel } from "./IBoardModel";
 
 export class BoardModel implements IBoardModel {
     private cells: number[] = [];

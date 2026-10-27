@@ -2,12 +2,14 @@ import type { IInitializable } from "../core/GameFactory";
 import Tile from "../tiles/Tile";
 import { TilePool } from "../tiles/TilePool";
 import type { GameConfig } from "../core/GameConfig";
-import {IBoardView} from "./IBoardView";
+import type { IBoardView } from "./IBoardView";
+import { BoardInputService } from "./BoardInputService";
 
 export interface BoardViewDependencies {
     tilePool: TilePool;
     colorSprites: cc.SpriteFrame[];
     config: GameConfig;
+    inputService: BoardInputService;
 }
 
 const { ccclass, property } = cc._decorator;
@@ -23,12 +25,14 @@ export default class BoardView extends cc.Component implements IBoardView, IInit
     private tilePool: TilePool;
     private colorSprites: cc.SpriteFrame[];
     private config: GameConfig;
+    private inputService: BoardInputService;
     private tiles: Tile[] = [];
 
     public init(dependencies: BoardViewDependencies): void {
         this.tilePool = dependencies.tilePool;
         this.colorSprites = dependencies.colorSprites;
         this.config = dependencies.config;
+        this.inputService = dependencies.inputService;
     }
 
     public initRender(cells: number[]): void {
@@ -42,7 +46,14 @@ export default class BoardView extends cc.Component implements IBoardView, IInit
             const row = Math.floor(i / this.config.boardColumns);
             tile.node.parent = this.initialPoint;
             tile.node.setPosition(column * this.cellSize.width, row * this.cellSize.height);
+            this.inputService.bind(tile.sprite.node, i);
             this.tiles.push(tile);
+        }
+    }
+
+    protected onDestroy(): void {
+        if (this.inputService) {
+            this.inputService.dispose();
         }
     }
 }
