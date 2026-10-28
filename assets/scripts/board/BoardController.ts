@@ -42,9 +42,11 @@ export class BoardController implements IBoardController {
 
         const cells = this.model.getCells();
         const spawnCount = this.spawnService.spawn(cells, this.spawnedIndices);
-        this.view.removeTiles(result.removedIndices, result.removedCount);
         if (result.transformedIndex >= 0) {
+            this.view.mergeTiles(result.removedIndices, result.removedCount, result.transformedIndex);
             this.view.transformTile(result.transformedIndex, result.transformedValue);
+        } else {
+            this.view.removeTiles(result.removedIndices, result.removedCount);
         }
         this.view.fallTiles(result.moves, result.moveCount, cells, this.spawnedIndices, spawnCount);
     }

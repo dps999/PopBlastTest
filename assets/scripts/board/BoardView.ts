@@ -52,6 +52,10 @@ export default class BoardView extends cc.Component implements IBoardView, IInit
         this.tileRenderer.removeTiles(indices, count);
     }
 
+    public mergeTiles(indices: number[], count: number, targetIndex: number): void {
+        this.tileRenderer.mergeTiles(indices, count, targetIndex);
+    }
+
     public swapTiles(first: number, second: number): void {
         this.tileRenderer.swapTiles(first, second);
     }

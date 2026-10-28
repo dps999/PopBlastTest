@@ -7,6 +7,8 @@ export interface IBoardView {
 
     removeTiles(indices: number[], count: number): void;
 
+    mergeTiles(indices: number[], count: number, targetIndex: number): void;
+
     swapTiles(first: number, second: number): void;
 
     setSelectedCell(index: number): void;

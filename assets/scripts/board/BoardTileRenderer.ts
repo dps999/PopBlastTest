@@ -20,6 +20,9 @@ interface TileRemovalState {
     elapsed: number;
     startScale: number;
     particlesStarted: boolean;
+    startX: number;
+    startY: number;
+    targetTile: Tile;
 }
 
 const { ccclass, property, disallowMultiple } = cc._decorator;
@@ -66,6 +69,10 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
     private readonly originalColor: cc.Color = cc.color(255, 255, 255);
     private readonly removalDuration: number = 0.36;
     private readonly particleStartDelay: number = 0.08;
+    private mergeTargetTile: Tile = null;
+    private mergeTargetElapsed: number = 0;
+    private mergeTargetStartScale: number = 1;
+    private readonly mergeTargetDuration: number = 0.24;
 
     public setSelectedCell(index: number): void {
         if (this.selectedIndex >= 0) {
@@ -118,7 +125,15 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
                 elapsed: 0,
                 duration: 0
             };
-            this.removalStates[i] = { tile: null, elapsed: 0, startScale: 1, particlesStarted: false };
+            this.removalStates[i] = {
+                tile: null,
+                elapsed: 0,
+                startScale: 1,
+                particlesStarted: false,
+                startX: 0,
+                startY: 0,
+                targetTile: null
+            };
         }
         // Прогреваем пул один раз, чтобы уничтожение тайлов не создавало узлы в игровом цикле.
         for (let i = 0; i < cellCount; i++) {
@@ -158,11 +173,26 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
 
     public removeTiles(indices: number[], count: number): void {
         for (let i = 0; i < count; i++) {
-            this.startTileRemoval(indices[i]);
+            this.startTileRemoval(indices[i], null);
         }
     }
 
-    private startTileRemoval(index: number): void {
+    public mergeTiles(indices: number[], count: number, targetIndex: number): void {
+        const targetTile = this.tiles[targetIndex];
+        if (!targetTile) {
+            this.removeTiles(indices, count);
+            return;
+        }
+        this.setSelectedCell(-1);
+        this.mergeTargetTile = targetTile;
+        this.mergeTargetElapsed = 0;
+        this.mergeTargetStartScale = targetTile.node.scale;
+        for (let i = 0; i < count; i++) {
+            this.startTileRemoval(indices[i], targetTile);
+        }
+    }
+
+    private startTileRemoval(index: number, targetTile: Tile): void {
         if (index === this.selectedIndex) {
             this.setSelectedCell(-1);
         }
@@ -176,7 +206,13 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
         state.tile = tile;
         state.elapsed = 0;
         state.startScale = tile.node.scale;
-        state.particlesStarted = false;
+        state.startX = tile.node.x;
+        state.startY = tile.node.y;
+        state.targetTile = targetTile;
+        state.particlesStarted = targetTile !== null;
+        if (targetTile) {
+            tile.node.setSiblingIndex(tile.node.parent.childrenCount - 1);
+        }
         this.inputService.setEnabled(false);
     }
 
@@ -304,8 +340,16 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
             const elapsed = state.elapsed + deltaTime;
             const progress = Math.min(1, elapsed / this.removalDuration);
             state.elapsed = elapsed;
-            tile.node.scale = state.startScale * (1 - progress);
-            tile.node.opacity = 255 * (1 - progress);
+            if (state.targetTile) {
+                const targetNode = state.targetTile.node;
+                tile.node.x = state.startX + (targetNode.x - state.startX) * progress;
+                tile.node.y = state.startY + (targetNode.y - state.startY) * progress;
+                tile.node.scale = state.startScale * (1 - progress);
+                tile.node.opacity = 255 * Math.min(1, (1 - progress) * 4);
+            } else {
+                tile.node.scale = state.startScale * (1 - progress);
+                tile.node.opacity = 255 * (1 - progress);
+            }
             if (!state.particlesStarted && elapsed >= this.particleStartDelay) {
                 this.spawnParticles(tile);
                 state.particlesStarted = true;
@@ -318,9 +362,21 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
             tile.node.opacity = 255;
             this.tilePool.release(tile);
             state.tile = null;
+            state.targetTile = null;
             const lastActiveIndex = --this.removalCount;
             this.removalStates[i] = this.removalStates[lastActiveIndex];
             this.removalStates[lastActiveIndex] = state;
+        }
+
+        if (this.mergeTargetTile) {
+            this.mergeTargetElapsed += deltaTime;
+            const pulseProgress = Math.min(1, this.mergeTargetElapsed / this.mergeTargetDuration);
+            const pulse = 1 + 0.2 * Math.sin(pulseProgress * Math.PI);
+            this.mergeTargetTile.node.scale = this.mergeTargetStartScale * pulse;
+            if (pulseProgress >= 1) {
+                this.mergeTargetTile.node.scale = this.mergeTargetStartScale;
+                this.mergeTargetTile = null;
+            }
         }
 
         for (let i = 0; i < this.activeParticleCount;) {
