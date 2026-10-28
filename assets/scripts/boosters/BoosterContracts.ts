@@ -1,6 +1,6 @@
 import type { TurnResult } from "../board/IBoardEngine";
 
-/** Стратегии не зависят от компонентов Cocos, спавна и отображения. */
+/** Стратегии используют только операции поля и отделены от рендеринга. */
 export interface IBoosterBoardActions {
     processRemoval(indices: number[], count: number): TurnResult;
     processSwap(first: number, second: number): TurnResult;
@@ -8,13 +8,21 @@ export interface IBoosterBoardActions {
 
 export interface IBoosterEffectStrategy {
     readonly targetCount: number;
+    validate(): void;
     canSelect(index: number, cells: number[], selected: number[], selectedCount: number): boolean;
-    execute(selected: number[], board: IBoosterBoardActions): TurnResult;
+    execute(selected: number[], board: IBoosterBoardActions, context: BoosterContext): TurnResult;
+}
+
+export interface BoosterContext {
+    readonly columns: number;
+    readonly capacity: number;
+    readonly targets: number[];
 }
 
 export interface BoosterDefinition {
     readonly effect: IBoosterEffectStrategy;
     readonly initialCount: number;
+    readonly icon: cc.SpriteFrame;
 }
 
 export interface IBoosterSelectionView {

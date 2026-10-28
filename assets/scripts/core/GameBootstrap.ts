@@ -19,15 +19,19 @@ export default class GameBootstrap extends cc.Component {
     @property([cc.SpriteFrame])
     private colorSprites: cc.SpriteFrame[] = [];
 
-    /** Каждый префаб содержит Tile и компонент SuperTileStrategy. */
+    /** Префабы стратегий супер-тайлов. */
     @property([cc.Prefab])
     private superTilePrefabs: cc.Prefab[] = [];
+
+    /** Каждый префаб содержит BoosterConfig и один компонент стратегии, без Sprite. */
+    @property([cc.Prefab])
+    private boosterPrefabs: cc.Prefab[] = [];
 
     @property(BoostersView)
     private boostersView: BoostersView = null;
 
     protected start(): void {
         GameFactory.createBoard(this.boardView, this.tilePrefab, this.colorSprites, this.config,
-            this.superTilePrefabs, this.boostersView);
+            this.superTilePrefabs, this.boosterPrefabs, this.boostersView);
     }
 }

@@ -26,6 +26,7 @@ export class GameFactory {
         colorSprites: cc.SpriteFrame[],
         config: GameConfig,
         superTilePrefabs: cc.Prefab[],
+        boosterPrefabs: cc.Prefab[],
         boostersView: BoostersView
     ): BoardController {
         if (!boostersView) {
@@ -42,9 +43,10 @@ export class GameFactory {
         const tilePool = new TilePool(tilePrefab);
         const engine = new BoardEngine(model, config.boardColumns, config.boardRows * config.boardColumns, superTiles.creation);
         const spawnService = new SpawnService(config.colorCount);
-        const definitions = BoosterFactory.createDefinitions(config.boardColumns, config.boardRows * config.boardColumns,
-            config.boosterBombRadius, config.bombBoosterCount, config.teleportBoosterCount);
-        const boosters = new BoosterController(definitions, new BoosterModel(definitions), model, engine, view, boostersView);
+        const definitions = BoosterFactory.createDefinitions(boosterPrefabs);
+        const capacity = config.boardRows * config.boardColumns;
+        const boosters = new BoosterController(definitions, new BoosterModel(definitions), model, engine,
+            view, boostersView, config.boardColumns, capacity);
         const controller = new BoardController(model, view, engine, spawnService, boosters);
         const inputService = new BoardInputService(controller);
         const tileRenderer = view.getComponent(BoardTileRenderer) || view.addComponent(BoardTileRenderer);
@@ -56,7 +58,7 @@ export class GameFactory {
             inputService
         });
         view.init({ tileRenderer, colorSprites, config });
-        boostersView.init(boosters, definitions.length);
+        boostersView.init(boosters, definitions);
         controller.init();
         inputService.setStateListener(boosters);
         return controller;

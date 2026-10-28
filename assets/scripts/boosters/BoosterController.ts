@@ -2,7 +2,7 @@ import type { TurnResult } from "../board/IBoardEngine";
 import type { IBoardInputStateListener } from "../board/BoardInputService";
 import type { IBoardModel } from "../board/IBoardModel";
 import type { BoosterModel } from "./BoosterModel";
-import type { BoosterDefinition, IBoosterBoardActions, IBoosterButtonListener, IBoosterInputController, IBoosterSelectionView, IBoostersView } from "./BoosterContracts";
+import type { BoosterContext, BoosterDefinition, IBoosterBoardActions, IBoosterButtonListener, IBoosterInputController, IBoosterSelectionView, IBoostersView } from "./BoosterContracts";
 
 export class BoosterController implements IBoosterButtonListener, IBoosterInputController, IBoardInputStateListener {
     private readonly definitions: BoosterDefinition[];
@@ -12,28 +12,31 @@ export class BoosterController implements IBoosterButtonListener, IBoosterInputC
     private readonly selectionView: IBoosterSelectionView;
     private readonly view: IBoostersView;
     private readonly selected: number[];
+    private readonly context: BoosterContext;
     private selectedCount: number = 0;
     private activeIndex: number = -1;
     private inputEnabled: boolean = true;
     private disposed: boolean = false;
 
     constructor(definitions: BoosterDefinition[], stock: BoosterModel, model: IBoardModel,
-        board: IBoosterBoardActions, selectionView: IBoosterSelectionView, view: IBoostersView) {
+        board: IBoosterBoardActions, selectionView: IBoosterSelectionView, view: IBoostersView,
+        columns: number, capacity: number) {
         this.definitions = definitions;
         this.stock = stock;
         this.model = model;
         this.board = board;
         this.selectionView = selectionView;
         this.view = view;
-        let capacity = 0;
+        this.context = { columns, capacity, targets: new Array<number>(capacity).fill(0) };
+        let selectedCapacity = 0;
         for (let i = 0; i < definitions.length; i++) {
             const count = definitions[i].effect.targetCount;
             if (!Number.isInteger(count) || count < 1) {
                 throw new Error("Booster target count must be a positive integer.");
             }
-            capacity = Math.max(capacity, count);
+            selectedCapacity = Math.max(selectedCapacity, count);
         }
-        this.selected = new Array<number>(capacity).fill(-1);
+        this.selected = new Array<number>(selectedCapacity).fill(-1);
     }
 
     public init(): void {
@@ -79,7 +82,7 @@ export class BoosterController implements IBoosterButtonListener, IBoosterInputC
             this.selectionView.setSelectedCell(this.selected[0]);
             return null;
         }
-        const result = effect.execute(this.selected, this.board);
+        const result = effect.execute(this.selected, this.board, this.context);
         if (result.valid) {
             this.stock.spend(this.activeIndex);
             this.cancel();

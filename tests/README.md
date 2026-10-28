@@ -7,18 +7,21 @@ atomic validation and deduplication of external removal, teleporting distant and
 special tiles, cancelling and switching selection, stock consumption and reset,
 the shared falling input lock, rejected effects, and a third injected strategy.
 `BoostersView.test.mjs` checks button subscription cleanup, stock display, controller
-wiring, prefab component UUIDs, both linked scene instances and serialized references.
+wiring, prefab component UUIDs and serialized scene references.
 `BoardView.test.mjs` also verifies teleport node identity, positions, input rebinding
 and selection tint cleanup before pooling and on destruction.
 
-Booster definitions are registered by `BoosterFactory`. Implement
-`IBoosterEffectStrategy`, add a definition and a matching instance of the common
-`BoosterButton` prefab to extend the system. `BoostersView.buttons` follows definition
-order. Initial counts and bomb radius are configured in `GameBootstrap.config`.
+Booster definitions are registered as prefab assets by `BoosterFactory`; each
+booster prefab contains exactly one `BoosterConfig` and one `BoosterEffectStrategy`
+component and no Sprite renderer. Implement a strategy component, create its prefab,
+and append that prefab to `GameBootstrap.boosterPrefabs` to extend the system.
+`BoosterConfig` carries its initial stock and icon; effect-specific settings such as
+bomb radius belong on the strategy component. `BoostersView` supplies the separate
+reusable button prefab and creates additional buttons from registered prefabs.
 Stock resets at level initialization, successful effects consume one charge and
 do not spend a move. Buttons and board input share the falling lock.
-The teleport button's `Icon` sprite frame is intentionally unassigned pending the
-user-supplied artwork. Verify final artwork and interaction in Cocos Preview.
+The teleport icon remains unassigned pending the user-supplied artwork. Verify
+final artwork and interaction in Cocos Preview.
 
 Known baseline issue: `SuperTileFactory.test.mjs` hard-codes a board super tile
 threshold of 10; the current locally edited prefab has 13. Booster work does not

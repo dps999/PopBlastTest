@@ -1522,10 +1522,7 @@
     },
     "_enabled": true,
     "config": {
-      "__id__": 35,
-      "boosterBombRadius": 1,
-      "bombBoosterCount": 3,
-      "teleportBoosterCount": 3
+      "__id__": 35
     },
     "boardView": {
       "__id__": 29
@@ -1567,7 +1564,15 @@
     "_id": "fenDJPMhRMOIXlVtfK92cN",
     "boostersView": {
       "__id__": 56
-    }
+    },
+    "boosterPrefabs": [
+      {
+        "__uuid__": "6793affc-23b4-4d0a-8b41-112bf5772868"
+      },
+      {
+        "__uuid__": "77d510d4-ae3a-4bc8-a623-68d24351c433"
+      }
+    ]
   },
   {
     "__type__": "GameConfig",
@@ -2320,14 +2325,17 @@
       "__id__": 15
     },
     "_enabled": true,
-    "buttons": [
+    "_id": "Gb7qSkwgRr2n/s5re05OZQ",
+    "buttonPrefab": {
+      "__uuid__": "d69a06b1-24d9-4098-8708-991164d7995b"
+    },
+    "initialButtons": [
       {
         "__id__": 41
       },
       {
         "__id__": 52
       }
-    ],
-    "_id": "Gb7qSkwgRr2n/s5re05OZQ"
+    ]
   }
 ]

@@ -22,10 +22,11 @@ export default class BoosterButton extends cc.Component {
     private readonly activeColor: cc.Color = cc.color(255, 225, 100);
     private readonly disabledColor: cc.Color = cc.color(150, 150, 150);
 
-    public init(listener: IBoosterButtonListener, index: number): void {
+    public init(listener: IBoosterButtonListener, index: number, icon: cc.SpriteFrame): void {
         this.dispose();
         this.listener = listener;
         this.index = index;
+        this.icon.spriteFrame = icon;
         this.node.on("click", this.onClick, this);
     }
 
