@@ -17,7 +17,7 @@ const { ccclass, property, disallowMultiple } = cc._decorator;
 @ccclass
 @disallowMultiple
 export default class BoardTileRenderer extends cc.Component implements IInitializable<BoardTileRendererDependencies> {
-    @property({ min: 1, tooltip: "Скорость падения в локальных единицах поля в секунду." })
+    @property({ min: 1, tooltip: "Средняя скорость ускоренного падения в локальных единицах поля в секунду." })
     private fallSpeed: number = 800;
 
     @property({ min: 0, tooltip: "Максимальная высота отскока при приземлении." })
@@ -167,7 +167,9 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
             const targetY = state.targetY;
             state.elapsed = elapsed;
             if (elapsed < duration) {
-                tile.node.y = state.startY + (targetY - state.startY) * elapsed / duration;
+                const progress = elapsed / duration;
+                // Квадратичный прогресс даёт падение из покоя с постоянным ускорением.
+                tile.node.y = state.startY + (targetY - state.startY) * progress * progress;
                 i++;
                 continue;
             }
