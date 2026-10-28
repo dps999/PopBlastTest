@@ -13,7 +13,6 @@ import {BoosterModel} from "../boosters/BoosterModel";
 import {BoosterController} from "../boosters/BoosterController";
 import type BoostersView from "../boosters/BoostersView";
 import {GameInputController} from "../gameplay/GameInputController";
-import {IInitializable} from "./IInitializable";
 import {GameModel} from "../gameplay/GameModel";
 import {GamePresenter} from "../gameplay/GamePresenter";
 import {ScoreCalculator} from "../gameplay/ScoreCalculator";
@@ -73,17 +72,5 @@ export class GameFactory {
         inputController.init();
         inputService.setStateListener(boosters);
         return boardController;
-    }
-
-    public static addComponent<TDependencies, T extends cc.Component & IInitializable<TDependencies>>(
-        node: cc.Node,
-        componentType: { new(): T },
-        dependencies: TDependencies
-    ): T {
-        // Cocos может вызвать onLoad внутри addComponent, до передачи зависимостей.
-        // Зависимости используй в init или в более поздних lifecycle-методах.
-        const component = node.addComponent(componentType);
-        component.init(dependencies);
-        return component;
     }
 }

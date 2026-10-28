@@ -4,7 +4,7 @@ import type Tile from "../tiles/Tile";
 import type { TilePool } from "../tiles/TilePool";
 import type { BoardInputService } from "./BoardInputService";
 import type { CellMove } from "./IBoardEngine";
-import type { IInitializable } from "../core/GameFactory";
+import {IInitializable} from "../core/IInitializable";
 
 export interface BoardTileRendererDependencies {
     tilePool: TilePool;
