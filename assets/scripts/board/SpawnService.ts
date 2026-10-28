@@ -10,7 +10,7 @@ export class SpawnService implements ISpawnService {
     public spawn(cells: number[]): void {
         for (let i = 0; i < cells.length; i++) {
             if (cells[i] === -1) {
-                cells[i] = cc.randomRangeInt(0, this.colorCount);
+                cells[i] = cc.math.randomRangeInt(0, this.colorCount);
             }
         }
     }

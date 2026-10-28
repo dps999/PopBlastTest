@@ -12,7 +12,7 @@ function lowestInteger(min: number, _max: number): number {
 
 Object.defineProperty(globalThis, "cc", {
     configurable: true,
-    value: { randomRangeInt: lowestInteger }
+    value: { math: { randomRangeInt: lowestInteger } }
 });
 
 describe("BoardController", () => {

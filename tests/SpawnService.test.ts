@@ -6,7 +6,7 @@ function lowestInteger(min: number, _max: number): number {
     return min;
 }
 
-const cocosStub = { randomRangeInt: lowestInteger };
+const cocosStub = { math: { randomRangeInt: lowestInteger } };
 Object.defineProperty(globalThis, "cc", {
     configurable: true,
     value: cocosStub
@@ -36,7 +36,7 @@ it("SpawnService generates both palette boundaries", function paletteBoundaries(
     assert.deepEqual(cells, [0, 0, 0]);
 
     cells.fill(-1);
-    const random = mock.method(cocosStub, "randomRangeInt", highestPaletteInteger);
+    const random = mock.method(cocosStub.math, "randomRangeInt", highestPaletteInteger);
     try {
         service.spawn(cells);
         assert.deepEqual(cells, [4, 4, 4]);
