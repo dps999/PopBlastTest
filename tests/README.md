@@ -34,10 +34,6 @@ do not spend a move. Buttons and board input share the falling lock.
 The teleport icon remains unassigned pending the user-supplied artwork. Verify
 final artwork and interaction in Cocos Preview.
 
-Known baseline issue: `SuperTileFactory.test.mjs` hard-codes a board super tile
-threshold of 10; the current locally edited prefab has 13. Booster work does not
-change that balancing value or the pre-existing assertion.
-
 Requirements: Node.js 22.18 or newer.
 
 Run the suite from the project root with:
@@ -55,7 +51,9 @@ The suite covers `GameModel`, the initial state and instance isolation of
 color generation through `SpawnService`, and forwarding the generated cells to the view.
 `SpawnService.test.ts` verifies filling empty cells, preserving existing colors and
 indices, both palette boundaries, repeated calls, and an empty board.
-`BoardController` also verifies synchronous click processing, refill followed by removal and
+`BoardController` tests call `processClick` and then `applyTurnResult`, matching the
+separate calculation and rendering phases. Booster input and level reset run through
+`GameInputController`. These checks verify synchronous click processing, refill followed by removal and
 combined falling (including an empty movement list), and ignoring invalid turns. `BoardModel` verifies that removal preserves
 cell indices and the original array.
 `BoardEngine` tests cover connected color groups, row boundaries, diagonals,
@@ -94,7 +92,11 @@ built-in type stripping removes TypeScript, and Inspector decorator lines are
 removed before loading the component. Tests cover simultaneous falls, per-column
 spawn stacks, pooled tiles, creating distinct new tiles when the pool is empty,
 final cell bindings, landing bounces, input locking,
-layout changes and destruction. This checks numeric animation behaviour, not
+layout changes and destruction. Removal checks cover the delayed particle start,
+shrinking and fading before returning a tile to its pool, warmed particle reuse,
+concurrent refill, and input remaining locked until both removal and falling finish.
+Pooling checks that require a released tile explicitly finish its removal first.
+This checks numeric animation behaviour, not
 actual rendering; visual validation still requires Cocos Preview.
 BoardView calculates geometry and forwards render commands; BoardTileRenderer owns
 tile creation, pooling, input bindings, and the animation update. Tests run both
@@ -114,5 +116,5 @@ and colorCount + prefab index identifies a super tile in the shared strategy reg
 To add an effect, implement a SuperTileStrategy component, attach it to an empty prefab,
 configure its threshold and sprite, and add it to GameBootstrap.superTilePrefabs.
 The highest eligible threshold wins; equal thresholds are selected uniformly at random.
-The scene thresholds remain 5/5/7/10. Tests cover reference identity, chains, effect areas,
+The scene thresholds are 5/5/7/13. Tests cover reference identity, chains, effect areas,
 no strategy prefab instantiation or extra pools, and common-pool sprite reset after reuse.

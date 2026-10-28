@@ -121,7 +121,7 @@ it("renders transformation before falling and refills only normal cells", functi
         }
     }, engine, new SpawnService(1));
     controller.init();
-    controller.onCellClicked(7);
+    controller.applyTurnResult(controller.processClick(7));
     assert.deepEqual(calls, ["remove", "transform", "fall"]);
 });
 

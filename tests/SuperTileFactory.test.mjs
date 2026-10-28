@@ -38,7 +38,7 @@ it("scene points to four prefabs with valid strategy UUIDs and migrated settings
     const bootstrap = scene.find(function component(value) { return value && value.superTilePrefabs; });
     assert.equal(bootstrap.superTilePrefabs.length, 4);
     const names = ["Row", "Column", "Radius", "Board"];
-    const expectedThresholds = [5, 5, 7, 10];
+    const expectedThresholds = [5, 5, 7, 13];
     for (let i = 0; i < names.length; i++) {
         const asset = new URL(`../assets/prefabs/superTileConfigs/${names[i]}SuperTile.prefab`, import.meta.url);
         const meta = JSON.parse(readFileSync(new URL(asset.href + ".meta"), "utf8"));

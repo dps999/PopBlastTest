@@ -5,6 +5,7 @@ import { stripTypeScriptTypes } from "node:module";
 globalThis.cc = {
     Component: class {},
     _decorator: {},
+    size(width, height) { return { width, height }; },
     color(r, g, b, a = 255) { return { r, g, b, a }; },
     Color: { copy(out, color) { Object.assign(out, color); } },
     isValid(value) { return !!value; },
@@ -12,6 +13,7 @@ globalThis.cc = {
         items = [];
         get() { return this.items.pop() || null; }
         put(node) { this.items[this.items.length] = node; }
+        clear() { this.items.length = 0; }
     },
     instantiate(prefab) { return prefab.instantiate(); }
 };

@@ -6,19 +6,33 @@ import { BoardController } from "../assets/scripts/board/BoardController.ts";
 import { BoardInputService } from "../assets/scripts/board/BoardInputService.ts";
 import { BoosterController } from "../assets/scripts/boosters/BoosterController.ts";
 import { BoosterModel } from "../assets/scripts/boosters/BoosterModel.ts";
-import { BombBoosterStrategy } from "../assets/scripts/boosters/BombBoosterStrategy.ts";
-import { TeleportBoosterStrategy } from "../assets/scripts/boosters/TeleportBoosterStrategy.ts";
 import { ThresholdCreationStrategy } from "../assets/scripts/superTiles/SuperTileStrategies.ts";
-import { RowEffectStrategy, ColumnEffectStrategy } from "./helpers/CocosComponents.mjs";
-import type { BoosterDefinition, IBoosterEffectStrategy } from "../assets/scripts/boosters/BoosterContracts.ts";
+import { loadGameModule, RowEffectStrategy, ColumnEffectStrategy } from "./helpers/CocosComponents.mjs";
+import { GameInputController } from "../assets/scripts/gameplay/GameInputController.ts";
+import type { BoosterContext, BoosterDefinition, IBoosterEffectStrategy } from "../assets/scripts/boosters/BoosterContracts.ts";
 import type { TurnResult } from "../assets/scripts/board/IBoardEngine.ts";
+
+const { default: BombBoosterStrategy } = await import(await loadGameModule("boosters/BombBoosterStrategy.ts"));
+const { default: TeleportBoosterStrategy } = await import(await loadGameModule("boosters/TeleportBoosterStrategy.ts"));
+const turnListener = { onTurnResolved(): void {} };
+
+function bomb(radius: number = 1) {
+    const effect = new BombBoosterStrategy();
+    effect.radius = radius;
+    effect.validate();
+    return effect;
+}
+
+function context(): BoosterContext {
+    return { columns: 5, capacity: 25, targets: new Array<number>(25).fill(0) };
+}
 
 function fixture(definitions?: BoosterDefinition[]) {
     const model = new BoardModel(5, 5);
     const engine = new BoardEngine(model, 5, 25);
     const registered = definitions || [
-        { effect: new BombBoosterStrategy(5, 25, 1), initialCount: 3 },
-        { effect: new TeleportBoosterStrategy(), initialCount: 3 }
+        { effect: bomb(), initialCount: 3, icon: null },
+        { effect: new TeleportBoosterStrategy(), initialCount: 3, icon: null }
     ];
     const stock = new BoosterModel(registered);
     const buttons: { count: number; active: boolean; enabled: boolean }[] = [];
@@ -33,7 +47,7 @@ function fixture(definitions?: BoosterDefinition[]) {
             buttons[index] = { count, active, enabled };
         }
     };
-    const boosters = new BoosterController(registered, stock, model, engine, view, view);
+    const boosters = new BoosterController(registered, stock, model, engine, view, view, 5, 25);
     const spawn = {
         calls: 0,
         spawn(cells: number[], indices?: number[]): number {
@@ -49,13 +63,14 @@ function fixture(definitions?: BoosterDefinition[]) {
             return count;
         }
     };
-    const board = new BoardController(model, view, engine, spawn, boosters);
+    const boardController = new BoardController(model, view, engine, spawn);
+    const board = new GameInputController(boardController, boosters, turnListener);
     board.init();
     return { model, engine, stock, view, buttons, boosters, board, spawn };
 }
 
 it("bomb clips a square at corners and edges, supports large radii and reuses its buffer", function areas() {
-    const effect = new BombBoosterStrategy(5, 25, 1);
+    const effect = bomb();
     let previous: number[] | null = null;
     const calls: number[][] = [];
     const actions = {
@@ -68,16 +83,17 @@ it("bomb clips a square at corners and edges, supports large radii and reuses it
         },
         processSwap(): TurnResult { throw new Error("Unexpected swap"); }
     };
-    effect.execute([12], actions);
-    effect.execute([0], actions);
-    effect.execute([24], actions);
-    effect.execute([2], actions);
+    const sharedContext = context();
+    effect.execute([12], actions, sharedContext);
+    effect.execute([0], actions, sharedContext);
+    effect.execute([24], actions, sharedContext);
+    effect.execute([2], actions, sharedContext);
     assert.deepEqual(calls, [[6, 7, 8, 11, 12, 13, 16, 17, 18], [0, 1, 5, 6], [18, 19, 23, 24], [1, 2, 3, 6, 7, 8]]);
     previous = null;
-    new BombBoosterStrategy(5, 25, 9).execute([0], actions);
+    bomb(9).execute([0], actions, context());
     assert.equal(calls[4].length, 25);
-    assert.throws(function fractional() { new BombBoosterStrategy(5, 25, 1.5); });
-    assert.throws(function zero() { new BombBoosterStrategy(5, 25, 0); });
+    assert.throws(function fractional() { bomb(1.5); });
+    assert.throws(function zero() { bomb(0); });
 });
 
 it("bomb activates overlapping super tiles once without creating new ones", function chains() {
@@ -94,7 +110,7 @@ it("bomb activates overlapping super tiles once without creating new ones", func
     ];
     model.transformCell(12, 3); model.transformCell(13, 4);
     const engine = new BoardEngine(model, 5, 25, new ThresholdCreationStrategy(effects, 3));
-    const result = new BombBoosterStrategy(5, 25, 1).execute([12], engine);
+    const result = bomb().execute([12], engine, context());
     assert.equal(result.valid, true);
     assert.equal(rowCalls, 1); assert.equal(columnCalls, 1);
     assert.equal(result.transformedIndex, -1); assert.equal(result.matchCount, 0);
@@ -159,7 +175,7 @@ it("stock reaches zero, disables the button and resets on level initialization",
     assert.equal(stock.getCount(1), 0); assert.equal(buttons[1].enabled, false);
     boosters.selectBooster(1); assert.equal(boosters.isActive(), false);
     board.init(); assert.equal(stock.getCount(1), 3); assert.equal(buttons[1].enabled, true);
-    assert.throws(function negative() { fixture([{ effect: new TeleportBoosterStrategy(), initialCount: -1 }]); });
+    assert.throws(function negative() { fixture([{ effect: new TeleportBoosterStrategy(), initialCount: -1, icon: null }]); });
 });
 
 it("shared input state blocks booster activation and targets during falling", function inputLock() {
@@ -179,13 +195,14 @@ it("shared input state blocks booster activation and targets during falling", fu
 it("a third strategy plugs into selection and rendering without controller changes", function extensibility() {
     const custom: IBoosterEffectStrategy = {
         targetCount: 1,
+        validate(): void {},
         canSelect(index): boolean { return index === 4; },
         execute(selected, actions): TurnResult { return actions.processRemoval(selected, 1); }
     };
     const { boosters, board, stock, buttons } = fixture([
-        { effect: new BombBoosterStrategy(5, 25, 1), initialCount: 0 },
-        { effect: new TeleportBoosterStrategy(), initialCount: 0 },
-        { effect: custom, initialCount: 1 }
+        { effect: bomb(), initialCount: 0, icon: null },
+        { effect: new TeleportBoosterStrategy(), initialCount: 0, icon: null },
+        { effect: custom, initialCount: 1, icon: null }
     ]);
     assert.equal(buttons[0].enabled, false);
     boosters.selectBooster(2); board.onCellClicked(0); assert.equal(stock.getCount(2), 1);
@@ -195,10 +212,11 @@ it("a third strategy plugs into selection and rendering without controller chang
 it("a rejected effect leaves stock unchanged and clears pending targets", function invalidEffect() {
     const custom: IBoosterEffectStrategy = {
         targetCount: 1,
+        validate(): void {},
         canSelect(): boolean { return true; },
         execute(_selected, actions): TurnResult { return actions.processSwap(0, 0); }
     };
-    const { boosters, board, stock, view } = fixture([{ effect: custom, initialCount: 1 }]);
+    const { boosters, board, stock, view } = fixture([{ effect: custom, initialCount: 1, icon: null }]);
     boosters.selectBooster(0); board.onCellClicked(3);
     assert.equal(stock.getCount(0), 1); assert.equal(boosters.isActive(), true); assert.equal(view.selected, -1);
 });

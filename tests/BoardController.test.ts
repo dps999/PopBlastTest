@@ -25,14 +25,14 @@ describe("BoardController", () => {
             {
                 processClick(index: number) {
                     clickedIndex = index;
-                    calls.push("processClick");
+                    calls[calls.length] = "processClick";
                     return { valid: false, removedIndices: [], matchCount: 0, moves: [], moveCount: 0 };
                 }
             },
             new SpawnService(1)
         );
-        controller.onCellClicked(12);
-        calls.push("returned");
+        controller.applyTurnResult(controller.processClick(12));
+        calls[calls.length] = "returned";
 
         assert.equal(clickedIndex, 12);
         assert.deepEqual(calls, ["processClick", "returned"]);
@@ -45,11 +45,11 @@ describe("BoardController", () => {
         const model = {
             transformCell(): void {},
             init(): void {
-                calls.push("init");
+                calls[calls.length] = "init";
                 currentCells = cells;
             },
             getCells(): number[] {
-                calls.push("getCells");
+                calls[calls.length] = "getCells";
                 return currentCells;
             },
             removeCells(): void {},
@@ -57,7 +57,7 @@ describe("BoardController", () => {
         };
         const view = {
             initRender(renderedCells: ReadonlyArray<number>): void {
-                calls.push("initRender");
+                calls[calls.length] = "initRender";
                 assert.strictEqual(renderedCells, cells);
                 assert.deepEqual(renderedCells, [2, 0, 1]);
             },
@@ -118,12 +118,12 @@ describe("BoardController", () => {
                 removeTiles(indices: number[], count: number): void {
                     assert.strictEqual(indices, removedIndices);
                     assert.equal(count, matchCount);
-                    calls.push("remove");
+                    calls[calls.length] = "remove";
                 },
                 fallTiles(actualMoves: CellMove[], count: number): void {
                     assert.strictEqual(actualMoves, moves);
                     assert.equal(count, moveCount);
-                    calls.push("fall");
+                    calls[calls.length] = "fall";
                 }
             },
             {
@@ -134,14 +134,16 @@ describe("BoardController", () => {
             new SpawnService(1)
         );
 
-        controller.onCellClicked(0);
+        const result = controller.processClick(0);
+        assert.deepEqual(calls, []);
+        controller.applyTurnResult(result);
         assert.deepEqual(calls, ["remove", "fall"]);
 
         moveCount = 0;
-        controller.onCellClicked(0);
+        controller.applyTurnResult(controller.processClick(0));
         assert.deepEqual(calls, ["remove", "fall", "remove", "fall"]);
 
-        controller.onCellClicked(3);
+        controller.applyTurnResult(controller.processClick(3));
         assert.equal(calls.length, 4);
         assert.equal(moves.length, 2);
     });
@@ -185,15 +187,15 @@ it("refills a complete turn and reuses only the current spawn prefix", function 
     const current = model.getCells();
     current.splice(0, 8, 1, 2, 1, 3, 4, 2, 3, 4);
     expectedSpawns = [4, 6];
-    controller.onCellClicked(0);
+    controller.applyTurnResult(controller.processClick(0));
     assert.deepEqual(current, [4, 2, 3, 3, 0, 2, 0, 4]);
 
     current[5] = 4;
     expectedSpawns = [5, 7];
-    controller.onCellClicked(7);
+    controller.applyTurnResult(controller.processClick(7));
     assert.deepEqual(current, [4, 2, 3, 3, 0, 0, 0, 0]);
 
-    controller.onCellClicked(-1);
+    controller.applyTurnResult(controller.processClick(-1));
     assert.equal(renderCalls, 1);
     assert.equal(fallCalls, 2);
     assert.equal(spawnCalls, 3);
@@ -215,6 +217,6 @@ it("refills a completely cleared board", function refillWholeBoard(): void {
         }
     }, new BoardEngine(model, 2, 4), new SpawnService(1));
     controller.init();
-    controller.onCellClicked(0);
+    controller.applyTurnResult(controller.processClick(0));
     assert.equal(falls, 1);
 });

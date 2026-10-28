@@ -1,26 +1,9 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { stripTypeScriptTypes } from "node:module";
 import { it } from "node:test";
+import { loadGameModule } from "./helpers/CocosComponents.mjs";
 
-// Node не исполняет декораторы Cocos. Убираем только строки метаданных Inspector;
-// методы компонентов исполняются без изменений, зависимости движка заменены заглушками.
-globalThis.cc = {
-    Component: class {},
-    _decorator: {},
-    size(width, height) { return { width, height }; },
-    color(r, g, b, a = 255) { return { r, g, b, a }; },
-    Color: { copy(out, color) { Object.assign(out, color); } },
-    isValid(value) { return !!value; }
-};
-const source = readFileSync(new URL("../assets/scripts/board/BoardView.ts", import.meta.url), "utf8")
-    .replace(/^\s*@(?:ccclass|property\([^\n]*\))\s*$/gm, "");
-const javascript = stripTypeScriptTypes(source);
-const { default: BoardView } = await import(`data:text/javascript;base64,${Buffer.from(javascript).toString("base64")}`);
-const rendererSource = readFileSync(new URL("../assets/scripts/board/BoardTileRenderer.ts", import.meta.url), "utf8")
-    .replace(/^\s*@(?:ccclass|disallowMultiple|property\([^\n]*\))\s*$/gm, "");
-const rendererJavascript = stripTypeScriptTypes(rendererSource);
-const { default: BoardTileRenderer } = await import(`data:text/javascript;base64,${Buffer.from(rendererJavascript).toString("base64")}`);
+const { default: BoardView } = await import(await loadGameModule("board/BoardView.ts"));
+const { default: BoardTileRenderer } = await import(await loadGameModule("board/BoardTileRenderer.ts"));
 
 function stepView(view, deltaTime) {
     view.update();
@@ -29,16 +12,30 @@ function stepView(view, deltaTime) {
 
 class TileStub {
     node = {
-        x: 0, y: 0, parent: null,
+        x: 0, y: 0, parent: null, scale: 1, opacity: 255,
         color: { r: 255, g: 255, b: 255, a: 255 },
         setPosition(x, y) { this.x = x; this.y = y; }
     };
-    sprite = { node: this.node };
+    sprite = { node: this.node, spriteFrame: null };
     frame = null;
     size = null;
-    setSprite(frame) { this.frame = frame; }
+    setSprite(frame) { this.frame = frame; this.sprite.spriteFrame = frame; }
     setSize(size) { this.size = size; }
 }
+
+class ParticleStub {
+    stopped = false;
+    particleCount = 0;
+    resets = 0;
+    node = { active: false, parent: null, x: 0, y: 0,
+        setPosition(x, y) { this.x = x; this.y = y; } };
+    constructor() { this.node.particles = this; this.node.getComponent = particlesOf; }
+    resetSystem() { this.stopped = false; this.resets++; }
+}
+
+function particlesOf() { return this.particles; }
+
+const particlePrefab = { instantiate() { return new ParticleStub().node; } };
 
 function createView(rows, columns, cells) {
     const view = new BoardView();
@@ -72,7 +69,7 @@ function createView(rows, columns, cells) {
     const colorSprites = ["red", "blue", "green"];
     const tileRenderer = new BoardTileRenderer();
     tileRenderer.fallSpeed = 10;
-    tileRenderer.init({ tilePool: pool, colorSprites, config, inputService: input });
+    tileRenderer.init({ tilePool: pool, colorSprites, config, inputService: input, tileRemovalParticlePrefab: particlePrefab });
     view.init({ tileRenderer, colorSprites, config });
     view.initRender(cells);
     return { view, input, released, pool };
@@ -103,6 +100,7 @@ it("selection tint never leaks into pooled tiles after removal or destruction", 
     view.setSelectedCell(0); view.setSelectedCell(1);
     assert.deepEqual(view.tileRenderer.tiles[0].node.color, { r: 255, g: 255, b: 255, a: 255 });
     view.removeTiles([1], 1);
+    stepView(view, 0.36);
     assert.deepEqual(released[0].node.color, { r: 255, g: 255, b: 255, a: 255 });
     const tile = view.tileRenderer.tiles[0];
     view.setSelectedCell(0); view.tileRenderer.onDestroy();
@@ -116,6 +114,7 @@ it("falls existing and pooled new tiles together and waits for the final landing
     const fallingBuffer = view.tileRenderer.fallingStates;
     const originalStates = new Set(fallingBuffer);
     view.removeTiles([0], 1);
+    stepView(view, 0.36);
     assert.equal(released.length, 1);
     view.fallTiles([{ from: 2, to: 0 }, { from: 4, to: 2 }], 2, [1, 0, 2, 2, 0, 1], [4, 999], 1);
     const fresh = view.tileRenderer.tiles[4];
@@ -167,6 +166,7 @@ it("refills a fully removed board without requiring existing moves", function al
     const { view, input } = createView(2, 2, [0, 0, 0, 0]);
     const originalTiles = view.tileRenderer.tiles.slice();
     view.removeTiles([0, 1, 2, 3], 4);
+    stepView(view, 0.36);
     view.fallTiles([], 0, [1, 2, 0, 1], [0, 1, 2, 3], 4);
     assert.deepEqual(view.tileRenderer.tiles.map(function y(tile) { return tile.node.y; }), [20, 20, 30, 30]);
     assert.ok(view.tileRenderer.tiles.every(function pooled(tile) { return originalTiles.includes(tile); }));
@@ -312,13 +312,67 @@ it("changes the sprite in place and reuses the same common pool", function strat
     assert.equal(pool.createdCount, created);
     assert.equal(released.length, 0);
     view.removeTiles([0], 1);
+    stepView(view, 0.36);
     view.fallTiles([{ from: 2, to: 0 }], 1, [0, 1, 2, 0], [2], 1);
     stepView(view, 100);
     assert.strictEqual(view.tileRenderer.tiles[0], tile);
     assert.equal(tile.frame, "row");
     view.removeTiles([0], 1);
+    stepView(view, 0.36);
     view.fallTiles([], 0, [1, 1, 2, 0], [0], 1);
     assert.strictEqual(view.tileRenderer.tiles[0], tile);
     assert.equal(tile.frame, "blue");
     assert.equal(pool.createdCount, created);
+});
+
+it("delays particles, keeps shrinking tiles out of the pool and locks input until both animations finish", function removalAndFall() {
+    const { view, input, released, pool } = createView(1, 1, [0]);
+    const renderer = view.tileRenderer;
+    const removed = renderer.tiles[0];
+    const particleNodes = renderer.particlePool.items.slice();
+    const states = renderer.removalStates;
+    renderer.fallSpeed = 1000;
+    view.removeTiles([0], 1);
+    assert.equal(renderer.tiles[0], null);
+    assert.equal(input.indices.has(removed.node), false);
+    assert.equal(input.enabled, false);
+    assert.equal(released.length, 0);
+    assert.equal(renderer.activeParticleCount, 0);
+    view.fallTiles([], 0, [1], [0], 1);
+    assert.notStrictEqual(renderer.tiles[0], removed);
+    assert.equal(pool.createdCount, 2);
+    stepView(view, 0.04);
+    assert.equal(renderer.activeParticleCount, 0);
+    assert.ok(removed.node.scale < 1 && removed.node.scale > 0);
+    assert.ok(removed.node.opacity < 255 && removed.node.opacity > 0);
+    stepView(view, 0.05);
+    assert.equal(renderer.activeParticleCount, 1);
+    const particles = renderer.activeParticleSystems[0];
+    assert.ok(particleNodes.includes(particles.node));
+    assert.equal(particles.spriteFrame, "red");
+    assert.equal(particles.node.parent, view.initialPoint);
+    assert.equal(particles.node.x, removed.node.x); assert.equal(particles.node.y, removed.node.y);
+    assert.equal(particles.resets, 1);
+    stepView(view, 0.1);
+    assert.equal(renderer.fallingCount, 0);
+    assert.equal(renderer.removalCount, 1);
+    assert.equal(input.enabled, false);
+    assert.equal(released.length, 0);
+    stepView(view, 0.2);
+    assert.equal(renderer.removalCount, 0);
+    assert.strictEqual(released[0], removed);
+    assert.equal(removed.node.scale, 1); assert.equal(removed.node.opacity, 255);
+    assert.equal(input.enabled, true);
+    assert.equal(particles.resets, 1);
+    assert.strictEqual(renderer.removalStates, states);
+    assert.equal(states[0].tile, null);
+    particles.stopped = true;
+    particles.particleCount = 1;
+    stepView(view, 0);
+    assert.equal(renderer.activeParticleCount, 1);
+    particles.particleCount = 0;
+    stepView(view, 0);
+    assert.equal(renderer.activeParticleCount, 0);
+    assert.equal(particles.node.active, false);
+    assert.deepEqual(renderer.particlePool.items, particleNodes);
 });
