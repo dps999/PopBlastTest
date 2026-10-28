@@ -1,6 +1,7 @@
 import { BoardController } from "../board/BoardController";
 import { BoardModel } from "../board/BoardModel";
 import BoardView from "../board/BoardView";
+import BoardTileRenderer from "../board/BoardTileRenderer";
 import { TilePool } from "../tiles/TilePool";
 import type { GameConfig } from "./GameConfig";
 import { BoardInputService } from "../board/BoardInputService";
@@ -26,12 +27,14 @@ export class GameFactory {
         const spawnService = new SpawnService(colorSprites.length);
         const controller = new BoardController(model, view, engine, spawnService);
         const inputService = new BoardInputService(controller);
-        view.init({
+        const tileRenderer = view.getComponent(BoardTileRenderer) || view.addComponent(BoardTileRenderer);
+        tileRenderer.init({
             tilePool,
             colorSprites,
             config,
             inputService
         });
+        view.init({ tileRenderer, colorSprites, config });
         controller.init();
         return controller;
     }

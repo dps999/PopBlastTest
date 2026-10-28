@@ -1085,6 +1085,9 @@
     "_components": [
       {
         "__id__": 29
+      },
+      {
+        "__id__": 35
       }
     ],
     "_prefab": null,
@@ -1368,9 +1371,6 @@
       "height": -9
     },
     "tileFillFactor": 1.12,
-    "fallSpeed": 800,
-    "landingBounceHeight": 5,
-    "landingBounceDuration": 0.1,
     "_id": "2dd0P5fApBZZ8WzdSKhwJe"
   },
   {
@@ -1519,5 +1519,18 @@
     "__type__": "GameConfig",
     "boardRows": 9,
     "boardColumns": 9
+  },
+  {
+    "__type__": "d31ccRFbVROMoa4vFW6+S/0",
+    "_name": "",
+    "_objFlags": 0,
+    "node": {
+      "__id__": 23
+    },
+    "_enabled": true,
+    "fallSpeed": 800,
+    "landingBounceHeight": 5,
+    "landingBounceDuration": 0.1,
+    "_id": ""
   }
 ]

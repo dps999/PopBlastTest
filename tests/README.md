@@ -53,13 +53,16 @@ refill, no existing moves, invalid turns, and reusing the spawn-index buffer.
 `SpawnService` returns the number of generated cells and optionally writes their
 indices in ascending order to a caller-owned buffer; only that prefix is valid.
 
-`BoardView.test.mjs` runs the actual BoardView methods with Cocos stubs. Node's
+`BoardView.test.mjs` runs BoardView together with BoardTileRenderer using Cocos stubs. Node's
 built-in type stripping removes TypeScript, and Inspector decorator lines are
 removed before loading the component. Tests cover simultaneous falls, per-column
 spawn stacks, pooled tiles, creating distinct new tiles when the pool is empty,
 final cell bindings, landing bounces, input locking,
 layout changes and destruction. This checks numeric animation behaviour, not
 actual rendering; visual validation still requires Cocos Preview.
+BoardView calculates geometry and forwards render commands; BoardTileRenderer owns
+tile creation, pooling, input bindings, and the animation update. Tests run both
+components in frame order and verify that BoardView does not advance animations itself.
 Fall-state tests also verify a fixed-capacity object buffer, a dense active prefix,
 different completion times without skipped or double updates, and reuse of the
 same objects across turns and after cancellation.
