@@ -34,6 +34,9 @@ bomb radius belong on the strategy component. `BoostersView` supplies the separa
 reusable button prefab and creates additional buttons from registered prefabs.
 Stock resets at level initialization, successful effects consume one charge and
 do not spend a move. Buttons and board input share the falling lock.
+BoostersView receives only a button listener and does not own the controller's
+lifetime. Each BoosterButton removes its own subscriptions on destruction;
+the booster controller has no external resources requiring disposal.
 The teleport icon is configured in its definition prefab. Button initialization
 applies definition icons over serialized scene sprites; tests verify that override.
 Result popup wiring is checked through distinct nodes and label references rather

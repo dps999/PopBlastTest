@@ -192,8 +192,9 @@ it("shared input state blocks booster activation and targets during falling", as
     assert.equal(stock.getCount(1), 3); assert.equal(buttons[1].active, true);
     input.setEnabled(true); await board.onCellClicked(24);
     assert.equal(stock.getCount(1), 2); assert.equal(buttons[1].enabled, true);
-    input.dispose(); boosters.dispose(); input.setEnabled(false);
-    boosters.selectBooster(0); assert.equal(boosters.isActive(), false);
+    input.dispose(); input.setEnabled(false);
+    assert.equal(buttons[0].enabled, true);
+    boosters.selectBooster(0); assert.equal(boosters.isActive(), true);
 });
 
 it("a third strategy plugs into selection and rendering without controller changes", async function extensibility(): Promise<void> {

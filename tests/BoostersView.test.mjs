@@ -60,14 +60,14 @@ it("common button displays its icon and quantity, highlights selection and unsub
     value.onDestroy(); assert.equal(value.node.subscriptions.length, 0);
 });
 
-it("view reuses initial and child buttons, creates extra registered definitions and disposes its controller", function viewLifecycle() {
+it("view reuses buttons and each button releases its own subscriptions on destroy", function viewLifecycle() {
     const view = new BoostersView();
     const first = button(); const second = button();
     view.node = new ButtonsParent();
     view.node.children = [first.node, second.node];
     view.initialButtons = [first];
     view.buttonPrefab = { instantiate() { return button().node; } };
-    const controller = { disposed: false, selectBooster() {}, dispose() { this.disposed = true; } };
+    const controller = { selections: 0, selectBooster() { this.selections++; } };
     const definitions = [{ icon: "bomb" }, { icon: "teleport" }, { icon: "custom" }];
     view.init(controller, definitions); view.renderButton(2, 4, true, true);
     assert.strictEqual(view.buttons[0], first); assert.strictEqual(view.buttons[1], second);
@@ -75,8 +75,13 @@ it("view reuses initial and child buttons, creates extra registered definitions 
     assert.equal(view.buttons[2].index, 2);
     assert.deepEqual(view.buttons.map(iconOf), ["bomb", "teleport", "custom"]);
     assert.equal(view.node.childrenCount, 3); assert.equal(view.node.layoutUpdates, 1);
-    view.onDestroy(); assert.equal(controller.disposed, true);
-    assert.equal(view.controller, null);
+    const third = view.buttons[2];
+    first.onDestroy(); second.onDestroy(); third.onDestroy();
+    assert.equal(first.node.subscriptions.length, 0);
+    assert.equal(second.node.subscriptions.length, 0);
+    assert.equal(third.node.subscriptions.length, 0);
+    first.onClick(); second.onClick(); third.onClick();
+    assert.equal(controller.selections, 0);
 });
 
 function iconOf(value) { return value.icon.spriteFrame; }

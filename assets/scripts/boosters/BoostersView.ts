@@ -1,6 +1,5 @@
 import BoosterButton from "./BoosterButton";
-import type { BoosterController } from "./BoosterController";
-import type { BoosterDefinition, IBoostersView } from "./BoosterContracts";
+import type { BoosterDefinition, IBoosterButtonListener, IBoostersView } from "./BoosterContracts";
 
 const { ccclass, property } = cc._decorator;
 
@@ -14,11 +13,8 @@ export default class BoostersView extends cc.Component implements IBoostersView 
 
     private buttons: BoosterButton[] = [];
 
-    private controller: BoosterController = null;
-
-    public init(controller: BoosterController, definitions: BoosterDefinition[]): void {
+    public init(listener: IBoosterButtonListener, definitions: BoosterDefinition[]): void {
         const buttonsParent = this.node;
-        this.controller = controller;
         this.buttons = new Array<BoosterButton>(definitions.length);
         const layout = buttonsParent.getComponent(cc.Layout);
         for (let i = 0; i < definitions.length; i++) {
@@ -38,7 +34,7 @@ export default class BoostersView extends cc.Component implements IBoostersView 
             if (!button) {
                 throw new Error("Booster button prefab requires a BoosterButton component.");
             }
-            button.init(controller, i, definitions[i].icon);
+            button.init(listener, i, definitions[i].icon);
             this.buttons[i] = button;
         }
         if (layout) {
@@ -48,12 +44,5 @@ export default class BoostersView extends cc.Component implements IBoostersView 
 
     public renderButton(index: number, count: number, active: boolean, enabled: boolean): void {
         this.buttons[index].render(count, active, enabled);
-    }
-
-    protected onDestroy(): void {
-        if (this.controller) {
-            this.controller.dispose();
-            this.controller = null;
-        }
     }
 }

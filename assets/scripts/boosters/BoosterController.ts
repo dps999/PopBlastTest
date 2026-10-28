@@ -16,7 +16,6 @@ export class BoosterController implements IBoosterButtonListener, IBoosterInputC
     private selectedCount: number = 0;
     private activeIndex: number = -1;
     private inputEnabled: boolean = true;
-    private disposed: boolean = false;
 
     constructor(definitions: BoosterDefinition[], stock: BoosterModel, model: IBoardModel,
         board: IBoosterBoardActions, selectionView: IBoosterSelectionView, view: IBoostersView,
@@ -46,11 +45,11 @@ export class BoosterController implements IBoosterButtonListener, IBoosterInputC
     }
 
     public isActive(): boolean {
-        return !this.disposed && this.activeIndex >= 0;
+        return this.activeIndex >= 0;
     }
 
     public selectBooster(index: number): void {
-        if (this.disposed || !this.inputEnabled || !Number.isInteger(index)
+        if (!this.inputEnabled || !Number.isInteger(index)
             || index < 0 || index >= this.definitions.length || this.stock.getCount(index) === 0) {
             return;
         }
@@ -94,16 +93,8 @@ export class BoosterController implements IBoosterButtonListener, IBoosterInputC
     }
 
     public onInputEnabledChanged(enabled: boolean): void {
-        if (this.disposed) {
-            return;
-        }
         this.inputEnabled = enabled;
         this.render();
-    }
-
-    public dispose(): void {
-        this.cancel();
-        this.disposed = true;
     }
 
     private cancel(): void {
