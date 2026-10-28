@@ -224,8 +224,15 @@ it("links the bootstrap to the existing score view and configures ten points per
     assert.equal(scene[bootstrap.config.__id__].pointsPerTile, 10);
     const lost = scene[view.lostPopup.__id__];
     const won = scene[view.wonPopup.__id__];
-    assert.equal(scene[lost.node.__id__]._name, "GameOverPopup");
-    assert.equal(scene[won.node.__id__]._name, "WinPopup");
+    assert.notStrictEqual(lost, won);
+    assert.equal(lost.__type__, won.__type__);
+    assert.notDeepEqual(lost.node, won.node);
+    assert.equal(scene[lost.node.__id__].__type__, "cc.Node");
+    assert.equal(scene[won.node.__id__].__type__, "cc.Node");
+    assert.equal(scene[lost.scoreLabel.__id__].__type__, "cc.Label");
+    assert.equal(scene[lost.movesLabel.__id__].__type__, "cc.Label");
+    assert.equal(scene[won.scoreLabel.__id__].__type__, "cc.Label");
+    assert.equal(scene[won.movesLabel.__id__].__type__, "cc.Label");
     assert.equal(scene[lost.node.__id__]._active, false);
     assert.equal(scene[won.node.__id__]._active, false);
 });

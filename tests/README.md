@@ -34,8 +34,10 @@ bomb radius belong on the strategy component. `BoostersView` supplies the separa
 reusable button prefab and creates additional buttons from registered prefabs.
 Stock resets at level initialization, successful effects consume one charge and
 do not spend a move. Buttons and board input share the falling lock.
-The teleport icon remains unassigned pending the user-supplied artwork. Verify
-final artwork and interaction in Cocos Preview.
+The teleport icon is configured in its definition prefab. Button initialization
+applies definition icons over serialized scene sprites; tests verify that override.
+Result popup wiring is checked through distinct nodes and label references rather
+than node names. Verify final artwork and interaction in Cocos Preview.
 
 Requirements: Node.js 22.18 or newer.
 

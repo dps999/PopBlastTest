@@ -122,6 +122,12 @@ it("scene links button and strategy prefabs with configured stock, icons and exa
     const names = ["Bomb", "Teleport"];
     const effects = [new BombBoosterStrategy(), new TeleportBoosterStrategy()];
     const prefabs = new Array(2);
+    const expectedIcons = [
+        read("assets/textures/Blocks/block_bomb.png.meta").subMetas.block_bomb.uuid,
+        read("assets/textures/Hud/icon_booster_teleport.png.meta").subMetas.icon_booster_teleport.uuid
+    ];
+    const configuredButton = button();
+    const listener = { selectBooster() {} };
     for (let i = 0; i < names.length; i++) {
         const path = `assets/prefabs/boosters/${names[i]}Booster.prefab`;
         const data = read(path);
@@ -147,10 +153,14 @@ it("scene links button and strategy prefabs with configured stock, icons and exa
         assert.equal(scene[component.button.__id__].__type__, "cc.Button");
         assert.equal(scene[component.quantityLabel.__id__]._string, "3");
         const icon = scene[component.icon.__id__];
-        assert.deepEqual(icon._spriteFrame, config.icon);
-        if (i === 0) assert.equal(config.icon.__uuid__, read("assets/textures/Blocks/block_bomb.png.meta").subMetas.block_bomb.uuid);
-        else assert.equal(config.icon, null);
+        assert.equal(icon.__type__, "cc.Sprite");
+        assert.equal(config.icon.__uuid__, expectedIcons[i]);
+        // При запуске конфиг заменяет изображение, сохранённое в сцене.
+        configuredButton.icon.spriteFrame = icon._spriteFrame;
+        configuredButton.init(listener, i, config.icon);
+        assert.strictEqual(configuredButton.icon.spriteFrame, config.icon);
     }
+    configuredButton.dispose();
     assert.equal(prefab.filter(function labels(value) { return value.__type__ === "cc.Label"; }).length, 1);
     const buttonComponent = prefab.find(function component(value) { return value.__type__ === buttonType; });
     assert.equal(prefab[buttonComponent.quantityLabel.__id__].__type__, "cc.Label");
