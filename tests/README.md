@@ -24,6 +24,9 @@ the shared falling input lock, rejected effects, and a third injected strategy.
 wiring, prefab component UUIDs and serialized scene references.
 `BoardView.test.mjs` also verifies teleport node identity, positions, input rebinding
 and selection tint cleanup before pooling and on destruction.
+Draw order follows cell indices from the bottom row upward, including vertical
+teleports, falling and pooled reuse. Merging tiles and particles render above
+the ordinary board tiles.
 
 Booster definitions are registered as prefab assets by `BoosterFactory`; each
 booster prefab contains exactly one `BoosterConfig` and one `BoosterEffectStrategy`

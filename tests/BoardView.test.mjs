@@ -19,7 +19,7 @@ function stepView(view, deltaTime) {
 
 class TileStub {
     node = {
-        x: 0, y: 0, parent: null, scale: 1, opacity: 255,
+        x: 0, y: 0, parent: null, scale: 1, opacity: 255, zIndex: 0,
         color: { r: 255, g: 255, b: 255, a: 255 },
         setSiblingIndex(index) { this.siblingIndex = index; },
         setPosition(x, y) { this.x = x; this.y = y; }
@@ -36,7 +36,7 @@ class ParticleStub {
     particleCount = 0;
     resets = 0;
     elapsed = 0;
-    node = { active: false, parent: null, x: 0, y: 0,
+    node = { active: false, parent: null, x: 0, y: 0, zIndex: 0,
         setPosition(x, y) { this.x = x; this.y = y; } };
     constructor() { this.node.particles = this; this.node.getComponent = particlesOf; }
     resetSystem() { this.stopped = false; this.elapsed = 0; this.resets++; }
@@ -84,24 +84,33 @@ function createView(rows, columns, cells, initialize = true) {
     return { view, input, released, pool };
 }
 
-it("teleport swaps existing tile nodes, restores tint and rebinds both input indices", function teleportRendering() {
+it("vertical teleport preserves row draw order, node identity, tint and input indices", function teleportRendering() {
     const { view, input, released, pool } = createView(3, 2, [0, 1, 2, 0, 1, 2]);
     const first = view.tileRenderer.tiles[0];
-    const second = view.tileRenderer.tiles[5];
+    const second = view.tileRenderer.tiles[4];
+    assert.equal(first.node.zIndex, 0);
+    assert.equal(second.node.zIndex, 4);
     view.setSelectedCell(0);
     assert.deepEqual(first.node.color, { r: 255, g: 225, b: 100, a: 255 });
-    view.swapTiles(0, 5);
-    assert.strictEqual(view.tileRenderer.tiles[5], first);
+    view.swapTiles(0, 4);
+    assert.strictEqual(view.tileRenderer.tiles[4], first);
     assert.strictEqual(view.tileRenderer.tiles[0], second);
-    assert.equal(first.frame, "red"); assert.equal(second.frame, "green");
+    assert.equal(first.frame, "red"); assert.equal(second.frame, "blue");
     assert.deepEqual(first.node.color, { r: 255, g: 255, b: 255, a: 255 });
-    assert.equal(first.node.x, 10); assert.equal(first.node.y, 20);
+    assert.equal(first.node.x, 0); assert.equal(first.node.y, 20);
     assert.equal(second.node.x, 0); assert.equal(second.node.y, 0);
-    assert.equal(input.indices.get(first.node), 5); assert.equal(input.indices.get(second.node), 0);
+    assert.equal(input.indices.get(first.node), 4); assert.equal(input.indices.get(second.node), 0);
+    assert.equal(first.node.zIndex, 4);
+    assert.equal(second.node.zIndex, 0);
+    assert.ok(second.node.zIndex < view.tileRenderer.tiles[2].node.zIndex);
+    assert.ok(view.tileRenderer.tiles[2].node.zIndex < first.node.zIndex);
     assert.equal(input.enabled, true); assert.equal(pool.createdCount, 6); assert.equal(released.length, 0);
     assert.equal(view.tileRenderer.fallingCount, 0);
-    view.setSelectedCell(5); view.setSelectedCell(-1);
+    view.setSelectedCell(4); view.setSelectedCell(-1);
     assert.deepEqual(first.node.color, { r: 255, g: 255, b: 255, a: 255 });
+    view.swapTiles(4, 0);
+    assert.equal(first.node.zIndex, 0);
+    assert.equal(second.node.zIndex, 4);
 });
 
 it("selection tint never leaks into pooled tiles after removal or destruction", function selectionCleanup() {
@@ -135,6 +144,9 @@ it("falls existing and pooled new tiles together and waits for the final landing
     assert.equal(fresh.node.y, 30);
     assert.equal(input.indices.get(existing.node), 0);
     assert.equal(input.indices.get(fresh.node), 4);
+    assert.equal(existing.node.zIndex, 0);
+    assert.equal(view.tileRenderer.tiles[2].node.zIndex, 2);
+    assert.equal(fresh.node.zIndex, 4);
     assert.equal(input.enabled, false);
 
     stepView(view, 0.5);
@@ -366,6 +378,8 @@ it("delays particles, keeps shrinking tiles out of the pool and locks input unti
     assert.ok(particleNodes.includes(particles.node));
     assert.equal(particles.spriteFrame, "red");
     assert.equal(particles.node.parent, view.initialPoint);
+    assert.ok(particles.node.zIndex > renderer.tiles[0].node.zIndex);
+    assert.ok(particles.node.zIndex > removed.node.zIndex);
     assert.equal(particles.node.x, removed.node.x); assert.equal(particles.node.y, removed.node.y);
     assert.equal(particles.resets, 1);
     stepView(view, 0.1);
@@ -424,6 +438,8 @@ it("awaits the complete merge before starting fall and resolves only after the l
     const source = renderer.tiles[0];
     const target = renderer.tiles[1];
     const turn = controller.applyTurnResult(result);
+    assert.ok(source.node.zIndex > renderer.tiles[2].node.zIndex);
+    assert.ok(source.node.zIndex > target.node.zIndex);
     const mergeWait = view.waitForAnimations();
     assert.strictEqual(view.waitForAnimations(), mergeWait);
     stepView(view, 0.18);
@@ -440,6 +456,9 @@ it("awaits the complete merge before starting fall and resolves only after the l
     assert.equal(renderer.fallingCount, 3);
     assert.equal(spawn.calls, 2);
     assert.strictEqual(renderer.tiles[0], target);
+    assert.equal(target.node.zIndex, 0);
+    assert.strictEqual(renderer.tiles[2], source);
+    assert.equal(source.node.zIndex, 2);
     assert.equal(input.enabled, false);
     stepView(view, 1.08);
     await Promise.resolve();

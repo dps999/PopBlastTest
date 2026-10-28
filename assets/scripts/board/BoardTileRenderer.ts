@@ -245,7 +245,7 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
         state.targetTile = targetTile;
         state.particlesStarted = targetTile !== null;
         if (targetTile) {
-            tile.node.setSiblingIndex(tile.node.parent.childrenCount - 1);
+            tile.node.zIndex = this.tiles.length + index;
         }
         this.inputService.setEnabled(false);
     }
@@ -264,6 +264,7 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
             return;
         }
         node.parent = this.initialPoint;
+        node.zIndex = this.tiles.length * 2;
         node.setPosition(tile.node.x, tile.node.y);
         particleSystem.spriteFrame = tile.sprite.spriteFrame;
         node.active = true;
@@ -324,6 +325,7 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
     }
 
     private startFalling(tile: Tile, index: number): void {
+        tile.node.zIndex = index;
         const state = this.fallingStates[this.fallingCount++];
         const row = Math.floor(index / this.config.boardColumns);
         const targetY = row * this.rowStep;
@@ -445,6 +447,7 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
     private layoutTile(tile: Tile, index: number): void {
         tile.setSize(this.tileSize);
         tile.node.parent = this.initialPoint;
+        tile.node.zIndex = index;
         const column = index % this.config.boardColumns;
         const row = Math.floor(index / this.config.boardColumns);
         tile.node.setPosition(column * this.columnStep, row * this.rowStep);
