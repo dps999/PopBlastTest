@@ -81,11 +81,11 @@
       "__id__": 1
     },
     "_enabled": true,
-    "minimumGroupSize": 10,
-    "_id": "",
+    "minimumGroupSize": 13,
     "spriteFrame": {
       "__uuid__": "e73a6686-cf22-4d97-90ab-2d78fafe5634"
-    }
+    },
+    "_id": ""
   },
   {
     "__type__": "cc.PrefabInfo",
@@ -95,7 +95,7 @@
     "asset": {
       "__id__": 0
     },
-    "fileId": "ea807jdUUdGG46tL9Ixq0Cf",
+    "fileId": "",
     "sync": false
   }
 ]

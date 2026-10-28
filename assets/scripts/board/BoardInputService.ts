@@ -1,9 +1,14 @@
 import type { IBoardController } from "./IBoardController";
 
+export interface IBoardInputStateListener {
+    onInputEnabledChanged(enabled: boolean): void;
+}
+
 export class BoardInputService {
     private readonly controller: IBoardController;
     private readonly indices: Map<cc.Node, number> = new Map();
     private enabled: boolean = true;
+    private stateListener: IBoardInputStateListener = null;
 
     constructor(controller: IBoardController) {
         this.controller = controller;
@@ -22,10 +27,28 @@ export class BoardInputService {
     }
 
     public setEnabled(enabled: boolean): void {
+        if (this.enabled === enabled) {
+            return;
+        }
         this.enabled = enabled;
+        if (this.stateListener) {
+            this.stateListener.onInputEnabledChanged(enabled);
+        }
+    }
+
+    public isEnabled(): boolean {
+        return this.enabled;
+    }
+
+    public setStateListener(listener: IBoardInputStateListener): void {
+        this.stateListener = listener;
+        if (listener) {
+            listener.onInputEnabledChanged(this.enabled);
+        }
     }
 
     public dispose(): void {
+        this.stateListener = null;
         this.indices.forEach(this.unbindOnDispose, this);
         this.indices.clear();
     }

@@ -2,6 +2,28 @@
 
 Tests use Node.js's built-in test runner and TypeScript type stripping; there are no third-party test dependencies.
 
+`Boosters.test.ts` covers bomb squares and edge clipping, chained super tiles,
+atomic validation and deduplication of external removal, teleporting distant and
+special tiles, cancelling and switching selection, stock consumption and reset,
+the shared falling input lock, rejected effects, and a third injected strategy.
+`BoostersView.test.mjs` checks button subscription cleanup, stock display, controller
+wiring, prefab component UUIDs, both linked scene instances and serialized references.
+`BoardView.test.mjs` also verifies teleport node identity, positions, input rebinding
+and selection tint cleanup before pooling and on destruction.
+
+Booster definitions are registered by `BoosterFactory`. Implement
+`IBoosterEffectStrategy`, add a definition and a matching instance of the common
+`BoosterButton` prefab to extend the system. `BoostersView.buttons` follows definition
+order. Initial counts and bomb radius are configured in `GameBootstrap.config`.
+Stock resets at level initialization, successful effects consume one charge and
+do not spend a move. Buttons and board input share the falling lock.
+The teleport button's `Icon` sprite frame is intentionally unassigned pending the
+user-supplied artwork. Verify final artwork and interaction in Cocos Preview.
+
+Known baseline issue: `SuperTileFactory.test.mjs` hard-codes a board super tile
+threshold of 10; the current locally edited prefab has 13. Booster work does not
+change that balancing value or the pre-existing assertion.
+
 Requirements: Node.js 22.18 or newer.
 
 Run the suite from the project root with:

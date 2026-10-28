@@ -47,6 +47,36 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
     }[] = [];
     private fallingCount: number = 0;
     private columnSpawnCounts: number[] = [];
+    private selectedIndex: number = -1;
+    private readonly selectedColor: cc.Color = cc.color(255, 225, 100);
+    private readonly originalColor: cc.Color = cc.color(255, 255, 255);
+
+    public setSelectedCell(index: number): void {
+        if (this.selectedIndex >= 0) {
+            const previous = this.tiles[this.selectedIndex];
+            if (previous && cc.isValid(previous.sprite.node)) {
+                previous.sprite.node.color = this.originalColor;
+            }
+        }
+        this.selectedIndex = -1;
+        const tile = this.tiles[index];
+        if (tile && cc.isValid(tile.sprite.node)) {
+            cc.Color.copy(this.originalColor, tile.sprite.node.color);
+            tile.sprite.node.color = this.selectedColor;
+            this.selectedIndex = index;
+        }
+    }
+
+    public swapTiles(first: number, second: number): void {
+        this.setSelectedCell(-1);
+        const tile = this.tiles[first];
+        this.tiles[first] = this.tiles[second];
+        this.tiles[second] = tile;
+        this.layoutTile(this.tiles[first], first);
+        this.layoutTile(tile, second);
+        this.inputService.bind(this.tiles[first].sprite.node, first);
+        this.inputService.bind(tile.sprite.node, second);
+    }
 
     public init(dependencies: BoardTileRendererDependencies): void {
         this.tilePool = dependencies.tilePool;
@@ -99,6 +129,9 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
     }
 
     private releaseTile(index: number): void {
+        if (index === this.selectedIndex) {
+            this.setSelectedCell(-1);
+        }
         const tile = this.tiles[index];
         if (!tile) {
             return;
@@ -243,6 +276,7 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
     }
 
     protected onDestroy(): void {
+        this.setSelectedCell(-1);
         this.stopFalling();
         if (this.inputService) {
             this.inputService.dispose();

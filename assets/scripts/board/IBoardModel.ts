@@ -8,4 +8,6 @@ export interface IBoardModel {
     removeCells(indices: number[], count: number): void;
 
     moveCell(from: number, to: number): void;
+
+    swapCells(first: number, second: number): void;
 }

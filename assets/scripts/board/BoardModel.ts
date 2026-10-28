@@ -32,4 +32,10 @@ export class BoardModel implements IBoardModel {
         this.cells[to] = this.cells[from];
         this.cells[from] = -1;
     }
+
+    public swapCells(first: number, second: number): void {
+        const value = this.cells[first];
+        this.cells[first] = this.cells[second];
+        this.cells[second] = value;
+    }
 }

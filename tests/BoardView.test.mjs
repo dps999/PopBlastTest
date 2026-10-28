@@ -8,7 +8,10 @@ import { it } from "node:test";
 globalThis.cc = {
     Component: class {},
     _decorator: {},
-    size(width, height) { return { width, height }; }
+    size(width, height) { return { width, height }; },
+    color(r, g, b, a = 255) { return { r, g, b, a }; },
+    Color: { copy(out, color) { Object.assign(out, color); } },
+    isValid(value) { return !!value; }
 };
 const source = readFileSync(new URL("../assets/scripts/board/BoardView.ts", import.meta.url), "utf8")
     .replace(/^\s*@(?:ccclass|property\([^\n]*\))\s*$/gm, "");
@@ -27,6 +30,7 @@ function stepView(view, deltaTime) {
 class TileStub {
     node = {
         x: 0, y: 0, parent: null,
+        color: { r: 255, g: 255, b: 255, a: 255 },
         setPosition(x, y) { this.x = x; this.y = y; }
     };
     sprite = { node: this.node };
@@ -73,6 +77,37 @@ function createView(rows, columns, cells) {
     view.initRender(cells);
     return { view, input, released, pool };
 }
+
+it("teleport swaps existing tile nodes, restores tint and rebinds both input indices", function teleportRendering() {
+    const { view, input, released, pool } = createView(3, 2, [0, 1, 2, 0, 1, 2]);
+    const first = view.tileRenderer.tiles[0];
+    const second = view.tileRenderer.tiles[5];
+    view.setSelectedCell(0);
+    assert.deepEqual(first.node.color, { r: 255, g: 225, b: 100, a: 255 });
+    view.swapTiles(0, 5);
+    assert.strictEqual(view.tileRenderer.tiles[5], first);
+    assert.strictEqual(view.tileRenderer.tiles[0], second);
+    assert.equal(first.frame, "red"); assert.equal(second.frame, "green");
+    assert.deepEqual(first.node.color, { r: 255, g: 255, b: 255, a: 255 });
+    assert.equal(first.node.x, 10); assert.equal(first.node.y, 20);
+    assert.equal(second.node.x, 0); assert.equal(second.node.y, 0);
+    assert.equal(input.indices.get(first.node), 5); assert.equal(input.indices.get(second.node), 0);
+    assert.equal(input.enabled, true); assert.equal(pool.createdCount, 6); assert.equal(released.length, 0);
+    assert.equal(view.tileRenderer.fallingCount, 0);
+    view.setSelectedCell(5); view.setSelectedCell(-1);
+    assert.deepEqual(first.node.color, { r: 255, g: 255, b: 255, a: 255 });
+});
+
+it("selection tint never leaks into pooled tiles after removal or destruction", function selectionCleanup() {
+    const { view, released } = createView(1, 2, [0, 1]);
+    view.setSelectedCell(0); view.setSelectedCell(1);
+    assert.deepEqual(view.tileRenderer.tiles[0].node.color, { r: 255, g: 255, b: 255, a: 255 });
+    view.removeTiles([1], 1);
+    assert.deepEqual(released[0].node.color, { r: 255, g: 255, b: 255, a: 255 });
+    const tile = view.tileRenderer.tiles[0];
+    view.setSelectedCell(0); view.tileRenderer.onDestroy();
+    assert.deepEqual(tile.node.color, { r: 255, g: 255, b: 255, a: 255 });
+});
 
 it("falls existing and pooled new tiles together and waits for the final landing bounce", function simultaneousFall() {
     const { view, input, released } = createView(3, 2, [0, 0, 1, 2, 2, 1]);

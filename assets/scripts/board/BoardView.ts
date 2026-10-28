@@ -52,6 +52,14 @@ export default class BoardView extends cc.Component implements IBoardView, IInit
         this.tileRenderer.removeTiles(indices, count);
     }
 
+    public swapTiles(first: number, second: number): void {
+        this.tileRenderer.swapTiles(first, second);
+    }
+
+    public setSelectedCell(index: number): void {
+        this.tileRenderer.setSelectedCell(index);
+    }
+
     public fallTiles(
         moves: CellMove[],
         moveCount: number,

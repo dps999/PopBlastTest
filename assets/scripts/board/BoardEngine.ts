@@ -31,18 +31,13 @@ export class BoardEngine implements IBoardEngine {
         }
         this.result = {
             valid: false, removedIndices: this.matches, matchCount: 0, removedCount: 0,
-            transformedIndex: -1, transformedValue: -1, moves: this.moves, moveCount: 0
+            transformedIndex: -1, transformedValue: -1, swappedFirstIndex: -1, swappedSecondIndex: -1,
+            moves: this.moves, moveCount: 0
         };
     }
 
     public processClick(index: number): TurnResult {
-        const result = this.result;
-        result.valid = false;
-        result.matchCount = 0;
-        result.removedCount = 0;
-        result.moveCount = 0;
-        result.transformedIndex = -1;
-        result.transformedValue = -1;
+        const result = this.resetResult();
         const cells = this.model.getCells();
         if (!Number.isInteger(index) || index < 0 || index >= cells.length || cells[index] < 0) {
             return result;
@@ -69,11 +64,71 @@ export class BoardEngine implements IBoardEngine {
                 result.transformedValue = value;
             }
         }
-        this.model.removeCells(this.matches, removedCount);
+        return this.finishRemoval(removedCount);
+    }
+
+    /** Удаление от внешнего эффекта не проходит через правила создания супер-тайлов. */
+    public processRemoval(indices: number[], count: number): TurnResult {
+        const result = this.resetResult();
+        if (!Number.isInteger(count) || count < 1 || count > indices.length) {
+            return result;
+        }
+        const cells = this.model.getCells();
+        for (let i = 0; i < count; i++) {
+            const index = indices[i];
+            if (!Number.isInteger(index) || index < 0 || index >= cells.length) {
+                return result;
+            }
+        }
+        this.visited.fill(0);
+        let removedCount = 0;
+        for (let i = 0; i < count; i++) {
+            const index = indices[i];
+            if (cells[index] >= 0 && !this.visited[index]) {
+                this.visited[index] = 1;
+                this.matches[removedCount++] = index;
+            }
+        }
+        if (removedCount === 0) {
+            return result;
+        }
+        return this.finishRemoval(this.expandChain(removedCount));
+    }
+
+    public processSwap(first: number, second: number): TurnResult {
+        const result = this.resetResult();
+        const cells = this.model.getCells();
+        if (!Number.isInteger(first) || !Number.isInteger(second) || first === second
+            || first < 0 || second < 0 || first >= cells.length || second >= cells.length
+            || cells[first] < 0 || cells[second] < 0) {
+            return result;
+        }
+        this.model.swapCells(first, second);
         result.valid = true;
-        result.removedCount = removedCount;
-        result.moveCount = this.applyGravity();
+        result.swappedFirstIndex = first;
+        result.swappedSecondIndex = second;
         return result;
+    }
+
+    private resetResult(): TurnResult {
+        const result = this.result;
+        result.valid = false;
+        result.matchCount = 0;
+        result.removedCount = 0;
+        result.moveCount = 0;
+        result.transformedIndex = -1;
+        result.transformedValue = -1;
+        result.swappedFirstIndex = -1;
+        result.swappedSecondIndex = -1;
+        return result;
+    }
+
+    private finishRemoval(count: number): TurnResult {
+        this.model.removeCells(this.matches, count);
+        this.result.valid = true;
+        this.result.removedCount = count;
+        this.result.moveCount = this.applyGravity();
+        return this.result;
     }
 
     /** Массив удаления одновременно служит очередью: каждая клетка добавляется один раз. */
@@ -81,7 +136,10 @@ export class BoardEngine implements IBoardEngine {
         this.visited.fill(0);
         this.matches[0] = index;
         this.visited[index] = 1;
-        let count = 1;
+        return this.expandChain(1);
+    }
+
+    private expandChain(count: number): number {
         const cells = this.model.getCells();
         for (let head = 0; head < count; head++) {
             const origin = this.matches[head];

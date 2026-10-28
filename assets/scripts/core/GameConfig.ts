@@ -3,6 +3,15 @@ const { ccclass, property } = cc._decorator;
 @ccclass("GameConfig")
 export class GameConfig {
     @property({ type: cc.Integer, min: 1 })
+    public boosterBombRadius: number = 1;
+
+    @property({ type: cc.Integer, min: 0 })
+    public bombBoosterCount: number = 3;
+
+    @property({ type: cc.Integer, min: 0 })
+    public teleportBoosterCount: number = 3;
+
+    @property({ type: cc.Integer, min: 1 })
     public boardRows: number = 8;
 
     @property({ type: cc.Integer, min: 1 })

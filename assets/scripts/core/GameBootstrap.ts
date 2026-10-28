@@ -1,6 +1,7 @@
 import BoardView from "../board/BoardView";
 import { GameConfig } from "./GameConfig";
 import { GameFactory } from "./GameFactory";
+import BoostersView from "../boosters/BoostersView";
 
 const { ccclass, property } = cc._decorator;
 
@@ -22,7 +23,11 @@ export default class GameBootstrap extends cc.Component {
     @property([cc.Prefab])
     private superTilePrefabs: cc.Prefab[] = [];
 
+    @property(BoostersView)
+    private boostersView: BoostersView = null;
+
     protected start(): void {
-        GameFactory.createBoard(this.boardView, this.tilePrefab, this.colorSprites, this.config, this.superTilePrefabs);
+        GameFactory.createBoard(this.boardView, this.tilePrefab, this.colorSprites, this.config,
+            this.superTilePrefabs, this.boostersView);
     }
 }
