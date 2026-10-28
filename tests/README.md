@@ -77,6 +77,6 @@ and colorCount + prefab index identifies a super tile in the shared strategy reg
 
 To add an effect, implement a SuperTileStrategy component, attach it to an empty prefab,
 configure its threshold and sprite, and add it to GameBootstrap.superTilePrefabs.
-The highest eligible threshold wins; equal thresholds use the last prefab in the list.
+The highest eligible threshold wins; equal thresholds are selected uniformly at random.
 The scene thresholds remain 5/5/7/10. Tests cover reference identity, chains, effect areas,
 no strategy prefab instantiation or extra pools, and common-pool sprite reset after reuse.

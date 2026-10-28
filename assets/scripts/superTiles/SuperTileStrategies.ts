@@ -30,18 +30,34 @@ export class ThresholdCreationStrategy implements ISuperTileCreationStrategy {
         }
     }
 
-    /** Максимальный подходящий порог; при равенстве побеждает последний префаб. */
+    /** Максимальный подходящий порог; равные варианты выбираются равновероятно. */
     public selectTile(groupSize: number): number {
-        let selected = -1;
         let threshold = -1;
+        let candidateCount = 0;
         for (let i = 0; i < this.strategies.length; i++) {
-            const strategy = this.strategies[i];
-            if (groupSize >= strategy.minimumGroupSize && strategy.minimumGroupSize >= threshold) {
-                selected = this.colorCount + i;
-                threshold = strategy.minimumGroupSize;
+            const minimum = this.strategies[i].minimumGroupSize;
+            if (minimum > groupSize || minimum < threshold) {
+                continue;
+            }
+            if (minimum > threshold) {
+                threshold = minimum;
+                candidateCount = 0;
+            }
+            candidateCount++;
+        }
+        if (candidateCount === 0) {
+            return -1;
+        }
+        let choice = candidateCount === 1 ? 0 : Math.floor(Math.random() * candidateCount);
+        for (let i = 0; i < this.strategies.length; i++) {
+            if (this.strategies[i].minimumGroupSize === threshold) {
+                if (choice === 0) {
+                    return this.colorCount + i;
+                }
+                choice--;
             }
         }
-        return selected;
+        return -1;
     }
 
     public getStrategy(tileValue: number): ISuperTileEffectStrategy {

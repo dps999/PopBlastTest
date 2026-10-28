@@ -126,19 +126,36 @@ it("renders transformation before falling and refills only normal cells", functi
 });
 
 
-it("selects highest eligible threshold in any order, with last-prefab priority on ties", function equalThresholds() {
+it("selects randomly among the highest eligible equal thresholds", function equalThresholds() {
     const row = new RowEffectStrategy(); row.minimumGroupSize = 5;
     const column = new ColumnEffectStrategy(); column.minimumGroupSize = 5;
     const radius = new RadiusEffectStrategy(); radius.minimumGroupSize = 7;
     const board = new BoardEffectStrategy(); board.minimumGroupSize = 10;
-    const creation = new ThresholdCreationStrategy([board, row, column, radius], 5);
-    assert.equal(creation.selectTile(4), -1);
-    assert.strictEqual(creation.selectTile(5), 7);
-    assert.strictEqual(creation.selectTile(6), 7);
-    assert.strictEqual(creation.selectTile(7), 8);
-    assert.strictEqual(creation.selectTile(10), 5);
+    const creation = new ThresholdCreationStrategy([board, row, radius, column], 5);
+    const originalRandom = Math.random;
+    try {
+        Math.random = function first() { return 0; };
+        assert.equal(creation.selectTile(4), -1);
+        assert.equal(creation.selectTile(5), 6);
+        assert.equal(creation.selectTile(6), 6);
+        Math.random = function last() { return 0.999999; };
+        assert.equal(creation.selectTile(5), 8);
+        assert.equal(creation.selectTile(6), 8);
+        assert.equal(creation.selectTile(7), 7);
+        assert.equal(creation.selectTile(10), 5);
+        radius.minimumGroupSize = 5;
+        const three = new ThresholdCreationStrategy([board, row, radius, column], 5);
+        Math.random = function middle() { return 0.5; };
+        assert.equal(three.selectTile(5), 7);
+        Math.random = function firstAgain() { return 0; };
+        assert.equal(three.selectTile(5), 6);
+        Math.random = function lastAgain() { return 0.999999; };
+        assert.equal(three.selectTile(5), 8);
+        assert.equal(three.selectTile(10), 5);
+    } finally {
+        Math.random = originalRandom;
+    }
 });
-
 
 it("assigns super tile numbers directly above the configured color range", function numericCodes() {
     const effect = new RowEffectStrategy();
