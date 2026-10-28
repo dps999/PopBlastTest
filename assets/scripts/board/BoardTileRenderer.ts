@@ -19,6 +19,7 @@ interface TileRemovalState {
     tile: Tile;
     elapsed: number;
     startScale: number;
+    particlesStarted: boolean;
 }
 
 const { ccclass, property, disallowMultiple } = cc._decorator;
@@ -64,6 +65,7 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
     private readonly selectedColor: cc.Color = cc.color(255, 225, 100);
     private readonly originalColor: cc.Color = cc.color(255, 255, 255);
     private readonly removalDuration: number = 0.36;
+    private readonly particleStartDelay: number = 0.08;
 
     public setSelectedCell(index: number): void {
         if (this.selectedIndex >= 0) {
@@ -116,7 +118,7 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
                 elapsed: 0,
                 duration: 0
             };
-            this.removalStates[i] = { tile: null, elapsed: 0, startScale: 1 };
+            this.removalStates[i] = { tile: null, elapsed: 0, startScale: 1, particlesStarted: false };
         }
         // Прогреваем пул один раз, чтобы уничтожение тайлов не создавало узлы в игровом цикле.
         for (let i = 0; i < cellCount; i++) {
@@ -174,7 +176,7 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
         state.tile = tile;
         state.elapsed = 0;
         state.startScale = tile.node.scale;
-        this.spawnParticles(tile);
+        state.particlesStarted = false;
         this.inputService.setEnabled(false);
     }
 
@@ -302,10 +304,12 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
             const elapsed = state.elapsed + deltaTime;
             const progress = Math.min(1, elapsed / this.removalDuration);
             state.elapsed = elapsed;
-            const pulse = 1 + 0.12 * Math.sin(progress * Math.PI);
-            const remaining = 1 - progress;
-            tile.node.scale = state.startScale * pulse * remaining * remaining;
+            tile.node.scale = state.startScale * (1 - progress);
             tile.node.opacity = 255 * (1 - progress);
+            if (!state.particlesStarted && elapsed >= this.particleStartDelay) {
+                this.spawnParticles(tile);
+                state.particlesStarted = true;
+            }
             if (progress < 1) {
                 i++;
                 continue;
