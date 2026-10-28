@@ -9,17 +9,8 @@ export default class GameOverPopupView extends cc.Component {
     @property(cc.Label)
     private movesLabel: cc.Label = null;
 
-    @property(cc.Label)
-    private teleportQuantityLabel: cc.Label = null;
-
-    @property(cc.Label)
-    private bombQuantityLabel: cc.Label = null;
-
     @property([cc.Component.EventHandler])
     private continueEvents: cc.Component.EventHandler[] = [];
-
-    @property([cc.Component.EventHandler])
-    private exitEvents: cc.Component.EventHandler[] = [];
 
     public show(score: number, targetScore: number, moves: number): void {
         this.scoreLabel.string = score.toString() + "/" + targetScore.toString();
@@ -35,8 +26,4 @@ export default class GameOverPopupView extends cc.Component {
         cc.Component.EventHandler.emitEvents(this.continueEvents);
     }
 
-    public onExitClicked(): void {
-        this.hide();
-        cc.Component.EventHandler.emitEvents(this.exitEvents);
-    }
 }
