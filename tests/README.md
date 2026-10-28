@@ -60,3 +60,6 @@ spawn stacks, pooled tiles, creating distinct new tiles when the pool is empty,
 final cell bindings, landing bounces, input locking,
 layout changes and destruction. This checks numeric animation behaviour, not
 actual rendering; visual validation still requires Cocos Preview.
+Fall-state tests also verify a fixed-capacity object buffer, a dense active prefix,
+different completion times without skipped or double updates, and reuse of the
+same objects across turns and after cancellation.

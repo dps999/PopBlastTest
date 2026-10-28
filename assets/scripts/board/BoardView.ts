@@ -46,11 +46,13 @@ export default class BoardView extends cc.Component implements IBoardView, IInit
     private tileSize: cc.Size = cc.size(0, 0);
     private lastTileSpacingX: number = NaN;
     private lastTileSpacingY: number = NaN;
-    private fallingTiles: Tile[] = [];
-    private fallStartY: number[] = [];
-    private fallTargetY: number[] = [];
-    private fallElapsed: number[] = [];
-    private fallDurations: number[] = [];
+    private fallingStates: {
+        tile: Tile;
+        startY: number;
+        targetY: number;
+        elapsed: number;
+        duration: number;
+    }[] = [];
     private fallingCount: number = 0;
     private columnSpawnCounts: number[] = [];
 
@@ -60,11 +62,17 @@ export default class BoardView extends cc.Component implements IBoardView, IInit
         this.config = dependencies.config;
         this.inputService = dependencies.inputService;
         const cellCount = this.config.boardRows * this.config.boardColumns;
-        this.fallingTiles = new Array<Tile>(cellCount).fill(null);
-        this.fallStartY = new Array<number>(cellCount).fill(0);
-        this.fallTargetY = new Array<number>(cellCount).fill(0);
-        this.fallElapsed = new Array<number>(cellCount).fill(0);
-        this.fallDurations = new Array<number>(cellCount).fill(0);
+        this.fallingStates = new Array(cellCount);
+        // Состояния выделяются один раз при инициализации и переиспользуются во всех ходах.
+        for (let i = 0; i < cellCount; i++) {
+            this.fallingStates[i] = {
+                tile: null,
+                startY: 0,
+                targetY: 0,
+                elapsed: 0,
+                duration: 0
+            };
+        }
         this.columnSpawnCounts = new Array<number>(this.config.boardColumns).fill(0);
         this.refreshLayout();
     }
@@ -141,14 +149,14 @@ export default class BoardView extends cc.Component implements IBoardView, IInit
     }
 
     private startFalling(tile: Tile, index: number): void {
-        const slot = this.fallingCount++;
+        const state = this.fallingStates[this.fallingCount++];
         const row = Math.floor(index / this.config.boardColumns);
         const targetY = row * (this.tileSize.height + this.tileSpacing.height);
-        this.fallingTiles[slot] = tile;
-        this.fallStartY[slot] = tile.node.y;
-        this.fallTargetY[slot] = targetY;
-        this.fallElapsed[slot] = 0;
-        this.fallDurations[slot] = Math.abs(targetY - tile.node.y) / this.fallSpeed;
+        state.tile = tile;
+        state.startY = tile.node.y;
+        state.targetY = targetY;
+        state.elapsed = 0;
+        state.duration = Math.abs(targetY - tile.node.y) / this.fallSpeed;
     }
 
     private updateFalling(deltaTime: number): void {
@@ -156,33 +164,35 @@ export default class BoardView extends cc.Component implements IBoardView, IInit
             return;
         }
 
-        for (let i = 0; i < this.fallingTiles.length; i++) {
-            const tile = this.fallingTiles[i];
-            if (!tile) {
-                continue;
-            }
-
-            const elapsed = this.fallElapsed[i] + deltaTime;
-            const duration = this.fallDurations[i];
-            const targetY = this.fallTargetY[i];
-            this.fallElapsed[i] = elapsed;
+        for (let i = 0; i < this.fallingCount;) {
+            const state = this.fallingStates[i];
+            const tile = state.tile;
+            const elapsed = state.elapsed + deltaTime;
+            const duration = state.duration;
+            const targetY = state.targetY;
+            state.elapsed = elapsed;
             if (elapsed < duration) {
-                tile.node.y = this.fallStartY[i] + (targetY - this.fallStartY[i]) * elapsed / duration;
+                tile.node.y = state.startY + (targetY - state.startY) * elapsed / duration;
+                i++;
                 continue;
             }
 
-            const bounceHeight = Math.min(this.landingBounceHeight, Math.abs(targetY - this.fallStartY[i]) * 0.08);
+            const bounceHeight = Math.min(this.landingBounceHeight, Math.abs(targetY - state.startY) * 0.08);
             const bounceProgress = (elapsed - duration) / this.landingBounceDuration;
             if (bounceHeight > 0 && bounceProgress < 1) {
                 const remaining = 1 - bounceProgress;
                 // Нулевая скорость на краях отскока обеспечивает мягкий возврат в ячейку.
                 tile.node.y = targetY + 16 * bounceHeight * bounceProgress * bounceProgress * remaining * remaining;
+                i++;
                 continue;
             }
 
             tile.node.y = targetY;
-            this.fallingTiles[i] = null;
-            this.fallingCount--;
+            state.tile = null;
+            // Завершённое состояние уходит за активную часть массива без удаления объекта.
+            const lastActiveIndex = --this.fallingCount;
+            this.fallingStates[i] = this.fallingStates[lastActiveIndex];
+            this.fallingStates[lastActiveIndex] = state;
         }
 
         if (this.fallingCount === 0) {
@@ -191,7 +201,9 @@ export default class BoardView extends cc.Component implements IBoardView, IInit
     }
 
     private stopFalling(): void {
-        this.fallingTiles.fill(null);
+        for (let i = 0; i < this.fallingCount; i++) {
+            this.fallingStates[i].tile = null;
+        }
         this.fallingCount = 0;
         if (this.inputService) {
             this.inputService.setEnabled(true);

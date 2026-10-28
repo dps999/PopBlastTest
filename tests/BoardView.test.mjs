@@ -65,8 +65,8 @@ it("falls existing and pooled new tiles together and waits for the final landing
     const { view, input, released } = createView(3, 2, [0, 0, 1, 2, 2, 1]);
     const existing = view.tiles[2];
     const removed = view.tiles[0];
-    const fallingBuffer = view.fallingTiles;
-    const targets = view.fallTargetY;
+    const fallingBuffer = view.fallingStates;
+    const originalStates = new Set(fallingBuffer);
     view.removeTiles([0], 1);
     assert.equal(released.length, 1);
     view.fallTiles([{ from: 2, to: 0 }, { from: 4, to: 2 }], 2, [1, 0, 2, 2, 0, 1], [4, 999], 1);
@@ -92,8 +92,10 @@ it("falls existing and pooled new tiles together and waits for the final landing
     assert.equal(fresh.node.y, 20);
     assert.equal(view.fallingCount, 0);
     assert.equal(input.enabled, true);
-    assert.strictEqual(view.fallingTiles, fallingBuffer);
-    assert.strictEqual(view.fallTargetY, targets);
+    assert.strictEqual(view.fallingStates, fallingBuffer);
+    assert.equal(fallingBuffer.length, 6);
+    assert.equal(originalStates.size, 6);
+    assert.deepEqual(new Set(fallingBuffer), originalStates);
     view.update(100);
     assert.equal(fresh.node.y, 20);
 });
@@ -173,7 +175,7 @@ it("snaps active falls to their cells on layout changes and clears them on destr
     view.fallTiles([], 0, [0, 1], [1], 1);
     view.onDestroy();
     assert.equal(view.fallingCount, 0);
-    assert.ok(view.fallingTiles.every(function empty(tile) { return tile === null; }));
+    assert.ok(view.fallingStates.every(function empty(state) { return state.tile === null; }));
     assert.equal(input.indices.size, 0);
 });
 
@@ -182,4 +184,52 @@ it("leaves input enabled for an empty fall", function emptyFall() {
     view.fallTiles([], 0, [0], [999], 0);
     assert.equal(input.enabled, true);
     assert.equal(view.fallingCount, 0);
+});
+
+it("keeps a dense active prefix and reuses every state across turns", function reusableFallStates() {
+    const { view, input } = createView(3, 2, [0, 0, 1, 2, 2, 1]);
+    const buffer = view.fallingStates;
+    const originalStates = new Set(buffer);
+    view.removeTiles([0, 1, 3], 3);
+    view.fallTiles([{ from: 2, to: 0 }, { from: 4, to: 2 }, { from: 5, to: 1 }], 3,
+        [1, 1, 2, 0, 1, 2], [3, 4, 5], 3);
+    assert.equal(view.fallingCount, 6);
+
+    view.update(1.2);
+    assert.equal(view.fallingCount, 3);
+    assert.equal(input.enabled, false);
+    assert.ok(Math.abs(view.tiles[1].node.y - 8) < 1e-10);
+    assert.ok(Math.abs(view.tiles[3].node.y - 18) < 1e-10);
+    assert.ok(Math.abs(view.tiles[5].node.y - 28) < 1e-10);
+    for (let i = 0; i < buffer.length; i++) {
+        assert.equal(buffer[i].tile !== null, i < view.fallingCount);
+        if (i < view.fallingCount) {
+            assert.equal(buffer[i].elapsed, 1.2);
+        }
+    }
+
+    view.update(0.3);
+    assert.equal(view.tiles[1].node.y, 5);
+    assert.equal(view.tiles[3].node.y, 15);
+    assert.equal(view.tiles[5].node.y, 25);
+    view.update(100);
+    assert.equal(view.fallingCount, 0);
+    assert.equal(input.enabled, true);
+    assert.ok(buffer.every(function idle(state) { return state.tile === null; }));
+
+    view.removeTiles([4, 5], 2);
+    view.fallTiles([], 0, [1, 1, 2, 0, 2, 1], [4, 5], 2);
+    assert.equal(view.fallingCount, 2);
+    assert.equal(buffer[0].elapsed, 0);
+    assert.equal(buffer[1].elapsed, 0);
+    view.update(0.5);
+    assert.equal(view.tiles[4].node.y, 25);
+    assert.equal(view.tiles[5].node.y, 25);
+    view.stopFalling();
+    assert.equal(view.fallingCount, 0);
+    assert.ok(buffer.every(function idle(state) { return state.tile === null; }));
+    assert.strictEqual(view.fallingStates, buffer);
+    assert.equal(buffer.length, 6);
+    assert.equal(originalStates.size, 6);
+    assert.deepEqual(new Set(buffer), originalStates);
 });
