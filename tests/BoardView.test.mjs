@@ -4,8 +4,15 @@ import { loadGameModule } from "./helpers/CocosComponents.mjs";
 
 const { default: BoardView } = await import(await loadGameModule("board/BoardView.ts"));
 const { default: BoardTileRenderer } = await import(await loadGameModule("board/BoardTileRenderer.ts"));
+const { BoardController } = await import(await loadGameModule("board/BoardController.ts"));
 
 function stepView(view, deltaTime) {
+    const renderer = view.tileRenderer;
+    for (let i = 0; i < renderer.activeParticleCount; i++) {
+        const particles = renderer.activeParticleSystems[i];
+        particles.elapsed += deltaTime;
+        if (particles.elapsed >= 0.42) { particles.stopped = true; particles.particleCount = 0; }
+    }
     view.update();
     view.tileRenderer.update(deltaTime);
 }
@@ -14,6 +21,7 @@ class TileStub {
     node = {
         x: 0, y: 0, parent: null, scale: 1, opacity: 255,
         color: { r: 255, g: 255, b: 255, a: 255 },
+        setSiblingIndex(index) { this.siblingIndex = index; },
         setPosition(x, y) { this.x = x; this.y = y; }
     };
     sprite = { node: this.node, spriteFrame: null };
@@ -27,17 +35,18 @@ class ParticleStub {
     stopped = false;
     particleCount = 0;
     resets = 0;
+    elapsed = 0;
     node = { active: false, parent: null, x: 0, y: 0,
         setPosition(x, y) { this.x = x; this.y = y; } };
     constructor() { this.node.particles = this; this.node.getComponent = particlesOf; }
-    resetSystem() { this.stopped = false; this.resets++; }
+    resetSystem() { this.stopped = false; this.elapsed = 0; this.resets++; }
 }
 
 function particlesOf() { return this.particles; }
 
 const particlePrefab = { instantiate() { return new ParticleStub().node; } };
 
-function createView(rows, columns, cells) {
+function createView(rows, columns, cells, initialize = true) {
     const view = new BoardView();
     const released = [];
     const pool = {
@@ -64,14 +73,14 @@ function createView(rows, columns, cells) {
     view.getTileSizeFromBackground = function testTileSize() { return { width: 10, height: 10 }; };
     view.alignInitialPointToBackground = function testAlignment() {};
     view.tileSpacing = { width: 0, height: 0 };
-    view.initialPoint = {};
+    view.initialPoint = { childrenCount: rows * columns };
     const config = { boardRows: rows, boardColumns: columns };
     const colorSprites = ["red", "blue", "green"];
     const tileRenderer = new BoardTileRenderer();
     tileRenderer.fallSpeed = 10;
     tileRenderer.init({ tilePool: pool, colorSprites, config, inputService: input, tileRemovalParticlePrefab: particlePrefab });
     view.init({ tileRenderer, colorSprites, config });
-    view.initRender(cells);
+    if (initialize) { view.initRender(cells); }
     return { view, input, released, pool };
 }
 
@@ -218,6 +227,8 @@ it("snaps active falls to their cells on layout changes and clears them on destr
     stepView(view, 0.1);
     assert.equal(view.tileRenderer.tiles[1].node.y, 12);
     assert.equal(view.tileRenderer.fallingCount, 0);
+    assert.equal(input.enabled, false);
+    stepView(view, 0.5);
     assert.equal(input.enabled, true);
     view.removeTiles([1], 1);
     view.fallTiles([], 0, [0, 1], [1], 1);
@@ -296,6 +307,9 @@ it("updates animations in BoardTileRenderer independently of BoardView", functio
     assert.equal(fresh.node.y, 17.5);
     renderer.update(100);
     assert.equal(fresh.node.y, 10);
+    assert.equal(input.enabled, false);
+    renderer.activeParticleSystems[0].stopped = true;
+    renderer.update(0);
     assert.equal(input.enabled, true);
 });
 
@@ -362,7 +376,7 @@ it("delays particles, keeps shrinking tiles out of the pool and locks input unti
     assert.equal(renderer.removalCount, 0);
     assert.strictEqual(released[0], removed);
     assert.equal(removed.node.scale, 1); assert.equal(removed.node.opacity, 255);
-    assert.equal(input.enabled, true);
+    assert.equal(input.enabled, false);
     assert.equal(particles.resets, 1);
     assert.strictEqual(renderer.removalStates, states);
     assert.equal(states[0].tile, null);
@@ -373,6 +387,109 @@ it("delays particles, keeps shrinking tiles out of the pool and locks input unti
     particles.particleCount = 0;
     stepView(view, 0);
     assert.equal(renderer.activeParticleCount, 0);
+    assert.equal(input.enabled, true);
     assert.equal(particles.node.active, false);
     assert.deepEqual(renderer.particlePool.items, particleNodes);
+});
+
+function createPipeline(merge) {
+    const cells = [0, 0, 0];
+    const fixture = createView(3, 1, cells, false);
+    const model = { cells, init() {}, getCells() { return this.cells; } };
+    const spawn = {
+        calls: 0,
+        spawn(values, indices) {
+            this.calls++;
+            if (!indices) { return 0; }
+            indices[0] = 2;
+            values[2] = 1;
+            return 1;
+        }
+    };
+    const controller = new BoardController(model, fixture.view, null, spawn);
+    controller.init();
+    const result = {
+        valid: true, removedIndices: [0], removedCount: 1,
+        transformedIndex: merge ? 1 : -1, transformedValue: 2,
+        swappedFirstIndex: -1,
+        moves: [{ from: 1, to: 0 }, { from: 2, to: 1 }], moveCount: 2
+    };
+    return { ...fixture, controller, result, spawn };
+}
+
+it("awaits the complete merge before starting fall and resolves only after the landing bounce", async function mergePipeline() {
+    const { view, input, controller, result, spawn } = createPipeline(true);
+    const renderer = view.tileRenderer;
+    const source = renderer.tiles[0];
+    const target = renderer.tiles[1];
+    const turn = controller.applyTurnResult(result);
+    const mergeWait = view.waitForAnimations();
+    assert.strictEqual(view.waitForAnimations(), mergeWait);
+    stepView(view, 0.18);
+    await Promise.resolve();
+    assert.equal(source.node.scale, 1);
+    assert.equal(source.node.y, 5);
+    assert.equal(target.node.y, 10);
+    assert.equal(renderer.fallingCount, 0);
+    assert.equal(spawn.calls, 1);
+    assert.equal(input.enabled, false);
+    stepView(view, 0.18);
+    assert.equal(renderer.fallingCount, 0);
+    await Promise.resolve();
+    assert.equal(renderer.fallingCount, 3);
+    assert.equal(spawn.calls, 2);
+    assert.strictEqual(renderer.tiles[0], target);
+    assert.equal(input.enabled, false);
+    stepView(view, 1.08);
+    await Promise.resolve();
+    assert.ok(target.node.y > 0);
+    assert.equal(input.enabled, false);
+    stepView(view, 0.1);
+    assert.equal(await turn, true);
+    assert.equal(target.node.y, 0);
+    assert.equal(input.enabled, true);
+});
+
+it("awaits removal particles as well as the removed tiles before starting fall", async function removalPipeline() {
+    const { view, input, controller, result, spawn } = createPipeline(false);
+    const renderer = view.tileRenderer;
+    const upper = renderer.tiles[1];
+    const turn = controller.applyTurnResult(result);
+    stepView(view, 0.09);
+    stepView(view, 0.27);
+    await Promise.resolve();
+    assert.equal(renderer.removalCount, 0);
+    assert.equal(renderer.activeParticleCount, 1);
+    assert.equal(renderer.fallingCount, 0);
+    assert.equal(upper.node.y, 10);
+    assert.equal(spawn.calls, 1);
+    assert.equal(input.enabled, false);
+    stepView(view, 0.2);
+    assert.equal(renderer.fallingCount, 0);
+    await Promise.resolve();
+    assert.equal(renderer.activeParticleCount, 0);
+    assert.equal(renderer.fallingCount, 3);
+    stepView(view, 2);
+    assert.equal(await turn, true);
+    assert.equal(input.enabled, true);
+});
+
+it("cancels an awaited merge when destroyed and never starts falling", async function cancelledMerge() {
+    const { view, controller, result, spawn } = createPipeline(true);
+    const turn = controller.applyTurnResult(result);
+    stepView(view, 0.18);
+    view.tileRenderer.onDestroy();
+    assert.equal(await turn, false);
+    assert.equal(spawn.calls, 1);
+    assert.equal(view.tileRenderer.fallingCount, 0);
+});
+
+it("cancels an awaited fall when the renderer is destroyed", async function cancelledFall() {
+    const { view, controller, result } = createPipeline(true);
+    const turn = controller.applyTurnResult(result);
+    stepView(view, 0.36);
+    await Promise.resolve();
+    assert.equal(view.tileRenderer.fallingCount, 3);
+    view.tileRenderer.onDestroy();
+    assert.equal(await turn, false);
 });

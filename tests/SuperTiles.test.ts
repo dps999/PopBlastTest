@@ -105,14 +105,20 @@ it("validates component parameters", function validation() {
     assert.throws(function tooSmall() { new ThresholdCreationStrategy([radius], 5); });
 });
 
-it("renders transformation before falling and refills only normal cells", function controllerTurn() {
+it("renders transformation before falling and refills only normal cells", async function controllerTurn(): Promise<void> {
     globalThis.cc = { math: { randomRangeInt: function lowest(min: number) { return min; } } } as any;
     const { model, engine, registered } = board(4, 2);
     const calls: string[] = [];
     const controller = new BoardController(model, {
         initRender(): void {},
-        removeTiles(_indices, count): void { assert.equal(count, 7); calls[calls.length] = "remove"; },
+        mergeTiles(_indices, count, targetIndex): void {
+            assert.equal(count, 7);
+            assert.equal(targetIndex, 7);
+            calls[calls.length] = "merge";
+        },
         transformTile(index, value): void { assert.equal(index, 7); assert.equal(value, 5); calls[calls.length] = "transform"; },
+        setInputLocked(_locked: boolean): void {},
+        waitForAnimations(): Promise<boolean> { return Promise.resolve(true); },
         fallTiles(_moves, count, _cells, _spawned, spawnCount): void {
             assert.equal(count, 1);
             assert.equal(spawnCount, 7);
@@ -121,8 +127,8 @@ it("renders transformation before falling and refills only normal cells", functi
         }
     }, engine, new SpawnService(1));
     controller.init();
-    controller.applyTurnResult(controller.processClick(7));
-    assert.deepEqual(calls, ["remove", "transform", "fall"]);
+    await controller.applyTurnResult(controller.processClick(7));
+    assert.deepEqual(calls, ["merge", "transform", "fall"]);
 });
 
 

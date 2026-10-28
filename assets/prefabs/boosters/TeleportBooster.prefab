@@ -85,7 +85,9 @@
     },
     "_enabled": true,
     "initialCount": 3,
-    "icon": null,
+    "icon": {
+      "__uuid__": "0e03d505-fdeb-41ff-bf4f-2c4b52733da4"
+    },
     "_id": ""
   },
   {
@@ -106,7 +108,7 @@
     "asset": {
       "__id__": 0
     },
-    "fileId": "xahTcDntQyirdczcs9lHdg",
+    "fileId": "",
     "sync": false
   }
 ]

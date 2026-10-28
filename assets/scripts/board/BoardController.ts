@@ -30,24 +30,34 @@ export class BoardController implements IBoardController {
         return this.engine.processClick(index);
     }
 
-    public applyTurnResult(result: TurnResult | null): void {
+    public async applyTurnResult(result: TurnResult | null): Promise<boolean> {
         if (!result || !result.valid) {
-            return;
+            return false;
         }
 
-        if (result.swappedFirstIndex >= 0) {
-            this.view.swapTiles(result.swappedFirstIndex, result.swappedSecondIndex);
-            return;
-        }
+        this.view.setInputLocked(true);
+        try {
+            if (result.swappedFirstIndex >= 0) {
+                this.view.swapTiles(result.swappedFirstIndex, result.swappedSecondIndex);
+                return await this.view.waitForAnimations();
+            }
 
-        const cells = this.model.getCells();
-        const spawnCount = this.spawnService.spawn(cells, this.spawnedIndices);
-        if (result.transformedIndex >= 0) {
-            this.view.mergeTiles(result.removedIndices, result.removedCount, result.transformedIndex);
-            this.view.transformTile(result.transformedIndex, result.transformedValue);
-        } else {
-            this.view.removeTiles(result.removedIndices, result.removedCount);
+            if (result.transformedIndex >= 0) {
+                this.view.mergeTiles(result.removedIndices, result.removedCount, result.transformedIndex);
+                this.view.transformTile(result.transformedIndex, result.transformedValue);
+            } else {
+                this.view.removeTiles(result.removedIndices, result.removedCount);
+            }
+            if (!await this.view.waitForAnimations()) {
+                return false;
+            }
+
+            const cells = this.model.getCells();
+            const spawnCount = this.spawnService.spawn(cells, this.spawnedIndices);
+            this.view.fallTiles(result.moves, result.moveCount, cells, this.spawnedIndices, spawnCount);
+            return await this.view.waitForAnimations();
+        } finally {
+            this.view.setInputLocked(false);
         }
-        this.view.fallTiles(result.moves, result.moveCount, cells, this.spawnedIndices, spawnCount);
     }
 }

@@ -58,10 +58,17 @@ export class BoardInputService {
             return;
         }
         try {
-            this.controller.onCellClicked(index);
+            const task = this.controller.onCellClicked(index);
+            if (task) {
+                task.catch(this.onInputError);
+            }
         } catch (error) {
-            cc.error(error);
+            this.onInputError(error);
         }
+    }
+
+    private onInputError(error: unknown): void {
+        cc.error(error);
     }
 
     private unbindOnDispose(_index: number, node: cc.Node): void {

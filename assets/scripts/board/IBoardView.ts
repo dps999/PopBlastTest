@@ -13,6 +13,11 @@ export interface IBoardView {
 
     setSelectedCell(index: number): void;
 
+    setInputLocked(locked: boolean): void;
+
+    /** true после всех анимаций и частиц; false при уничтожении представления. */
+    waitForAnimations(): Promise<boolean>;
+
     /** Синхронно потребляет префиксы буферов и запускает общее падение. */
     fallTiles(moves: CellMove[], moveCount: number, cells: number[], spawnedIndices: number[], spawnCount: number): void;
 }

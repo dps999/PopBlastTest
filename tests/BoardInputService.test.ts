@@ -31,6 +31,11 @@ class TouchNode {
 
 const originalCc = Object.getOwnPropertyDescriptor(globalThis, "cc");
 const touchEnd = "touchend";
+const loggedErrors: unknown[] = [];
+
+function recordInputError(error: unknown): void {
+    loggedErrors[loggedErrors.length] = error;
+}
 
 before(() => {
     Object.defineProperty(globalThis, "cc", {
@@ -52,6 +57,23 @@ after(() => {
 });
 
 describe("BoardInputService", () => {
+    it("reports a rejected async input handler through the Cocos error logger", async function asyncFailure(context) {
+        const error = new Error("Input pipeline failed");
+        const handler = {
+            error,
+            onCellClicked(): Promise<void> { return Promise.reject(this.error); }
+        };
+        loggedErrors.length = 0;
+        context.mock.method(globalThis.cc, "error", recordInputError);
+        const service = new BoardInputService(handler);
+        const node = new TouchNode();
+        service.bind(node as unknown as cc.Node, 0);
+        node.emit(touchEnd);
+        await Promise.resolve();
+        assert.deepEqual(loggedErrors, [error]);
+        service.dispose();
+    });
+
     it("ignores clicks while disabled and uses the new cell index after enabling", () => {
         const clicks: number[] = [];
         const service = new BoardInputService({ onCellClicked: (index) => { clicks.push(index); } });

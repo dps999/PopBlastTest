@@ -42,6 +42,8 @@ function fixture(definitions?: BoosterDefinition[]) {
         removeTiles(): void { this.removes++; },
         swapTiles(): void { this.swaps++; },
         fallTiles(): void { this.falls++; },
+        setInputLocked(_locked: boolean): void {},
+        waitForAnimations(): Promise<boolean> { return Promise.resolve(true); },
         setSelectedCell(index: number): void { this.selected = index; },
         renderButton(index: number, count: number, active: boolean, enabled: boolean): void {
             buttons[index] = { count, active, enabled };
@@ -128,14 +130,14 @@ it("external removal deduplicates seeds and rejects malformed requests atomicall
     assert.equal(engine.processRemoval([0, 0, 1], 3).removedCount, 2);
 });
 
-it("teleport selects two distant tiles, including super tiles, without refill or gravity", function teleport() {
+it("teleport selects two distant tiles, including super tiles, without refill or gravity", async function teleport(): Promise<void> {
     const { model, boosters, board, view, stock, spawn, engine } = fixture();
     const cells = model.getCells(); cells[0] = 8; cells[24] = 1;
     const before = cells.slice();
-    boosters.selectBooster(1); board.onCellClicked(0);
+    boosters.selectBooster(1); await board.onCellClicked(0);
     assert.equal(view.selected, 0); assert.equal(stock.getCount(1), 3);
     assert.deepEqual(cells, before); assert.equal(view.falls, 0);
-    board.onCellClicked(24);
+    await board.onCellClicked(24);
     assert.equal(cells[0], 1); assert.equal(cells[24], 8);
     assert.equal(view.swaps, 1); assert.equal(view.falls, 0); assert.equal(view.removes, 0);
     assert.equal(spawn.calls, 1); assert.equal(view.selected, -1);
@@ -153,46 +155,46 @@ it("teleport selects two distant tiles, including super tiles, without refill or
     assert.equal(engine.processSwap(0, 1).valid, false);
 });
 
-it("selection can be cancelled, deselected, switched and invalid clicks never spend stock", function selection() {
+it("selection can be cancelled, deselected, switched and invalid clicks never spend stock", async function selection(): Promise<void> {
     const { boosters, board, view, stock, buttons, model } = fixture();
-    boosters.selectBooster(1); board.onCellClicked(0); board.onCellClicked(0);
+    boosters.selectBooster(1); await board.onCellClicked(0); await board.onCellClicked(0);
     assert.equal(view.selected, -1); assert.equal(boosters.isActive(), true);
-    board.onCellClicked(1); boosters.selectBooster(1);
+    await board.onCellClicked(1); boosters.selectBooster(1);
     assert.equal(boosters.isActive(), false); assert.equal(view.selected, -1);
-    boosters.selectBooster(1); board.onCellClicked(0); boosters.selectBooster(0);
+    boosters.selectBooster(1); await board.onCellClicked(0); boosters.selectBooster(0);
     assert.equal(view.selected, -1); assert.equal(buttons[0].active, true); assert.equal(buttons[1].active, false);
-    board.onCellClicked(-1); board.onCellClicked(25); board.onCellClicked(1.1);
+    await board.onCellClicked(-1); await board.onCellClicked(25); await board.onCellClicked(1.1);
     assert.equal(stock.getCount(0), 3); assert.equal(stock.getCount(1), 3);
-    board.onCellClicked(12);
+    await board.onCellClicked(12);
     assert.equal(stock.getCount(0), 2); assert.equal(view.falls, 1); assert.equal(view.removes, 1);
     assert.equal(boosters.isActive(), false);
     assert.ok(model.getCells().every(function filled(value) { return value >= 0; }));
 });
 
-it("stock reaches zero, disables the button and resets on level initialization", function stock() {
+it("stock reaches zero, disables the button and resets on level initialization", async function stock(): Promise<void> {
     const { boosters, board, buttons, stock } = fixture();
-    for (let i = 0; i < 3; i++) { boosters.selectBooster(1); board.onCellClicked(0); board.onCellClicked(3); }
+    for (let i = 0; i < 3; i++) { boosters.selectBooster(1); await board.onCellClicked(0); await board.onCellClicked(3); }
     assert.equal(stock.getCount(1), 0); assert.equal(buttons[1].enabled, false);
     boosters.selectBooster(1); assert.equal(boosters.isActive(), false);
     board.init(); assert.equal(stock.getCount(1), 3); assert.equal(buttons[1].enabled, true);
     assert.throws(function negative() { fixture([{ effect: new TeleportBoosterStrategy(), initialCount: -1, icon: null }]); });
 });
 
-it("shared input state blocks booster activation and targets during falling", function inputLock() {
+it("shared input state blocks booster activation and targets during falling", async function inputLock(): Promise<void> {
     const { boosters, board, buttons, stock } = fixture();
     const input = new BoardInputService(board); input.setStateListener(boosters);
-    boosters.selectBooster(1); board.onCellClicked(0);
+    boosters.selectBooster(1); await board.onCellClicked(0);
     input.setEnabled(false); assert.equal(input.isEnabled(), false);
     assert.equal(buttons[0].enabled, false); assert.equal(buttons[1].enabled, false);
-    boosters.selectBooster(0); board.onCellClicked(24);
+    boosters.selectBooster(0); await board.onCellClicked(24);
     assert.equal(stock.getCount(1), 3); assert.equal(buttons[1].active, true);
-    input.setEnabled(true); board.onCellClicked(24);
+    input.setEnabled(true); await board.onCellClicked(24);
     assert.equal(stock.getCount(1), 2); assert.equal(buttons[1].enabled, true);
     input.dispose(); boosters.dispose(); input.setEnabled(false);
     boosters.selectBooster(0); assert.equal(boosters.isActive(), false);
 });
 
-it("a third strategy plugs into selection and rendering without controller changes", function extensibility() {
+it("a third strategy plugs into selection and rendering without controller changes", async function extensibility(): Promise<void> {
     const custom: IBoosterEffectStrategy = {
         targetCount: 1,
         validate(): void {},
@@ -205,11 +207,11 @@ it("a third strategy plugs into selection and rendering without controller chang
         { effect: custom, initialCount: 1, icon: null }
     ]);
     assert.equal(buttons[0].enabled, false);
-    boosters.selectBooster(2); board.onCellClicked(0); assert.equal(stock.getCount(2), 1);
-    board.onCellClicked(4); assert.equal(stock.getCount(2), 0); assert.equal(buttons[2].enabled, false);
+    boosters.selectBooster(2); await board.onCellClicked(0); assert.equal(stock.getCount(2), 1);
+    await board.onCellClicked(4); assert.equal(stock.getCount(2), 0); assert.equal(buttons[2].enabled, false);
 });
 
-it("a rejected effect leaves stock unchanged and clears pending targets", function invalidEffect() {
+it("a rejected effect leaves stock unchanged and clears pending targets", async function invalidEffect(): Promise<void> {
     const custom: IBoosterEffectStrategy = {
         targetCount: 1,
         validate(): void {},
@@ -217,6 +219,6 @@ it("a rejected effect leaves stock unchanged and clears pending targets", functi
         execute(_selected, actions): TurnResult { return actions.processSwap(0, 0); }
     };
     const { boosters, board, stock, view } = fixture([{ effect: custom, initialCount: 1, icon: null }]);
-    boosters.selectBooster(0); board.onCellClicked(3);
+    boosters.selectBooster(0); await board.onCellClicked(3);
     assert.equal(stock.getCount(0), 1); assert.equal(boosters.isActive(), true); assert.equal(view.selected, -1);
 });

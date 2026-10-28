@@ -6,8 +6,9 @@ Tests use Node.js's built-in test runner and TypeScript type stripping; there ar
 model, presenter and GameView with a label stub. It covers configurable
 points per removed cell, cumulative scoring, super tile creation and overlapping
 chains, bomb effects, invalid clicks, teleport selection/cancellation/swaps, and
-the scene's HUD reference. Score changes reach the HUD synchronously before tile
-removal is rendered; no animation callback or retained TurnResult is involved.
+the scene's HUD reference. Score changes reach the HUD after awaiting the complete
+turn pipeline. Further clicks are ignored until it finishes, so the engine cannot
+overwrite its reusable TurnResult during an awaited animation.
 Run these checks independently with `node --test tests/Scoring.test.ts tests/GameModel.test.mjs`.
 `GameModel.test.mjs` also checks tile-price validation, reward calculation and
 accumulation, and zero rewards when no cells are removed. GameModel owns the
@@ -51,10 +52,11 @@ The suite covers `GameModel`, the initial state and instance isolation of
 color generation through `SpawnService`, and forwarding the generated cells to the view.
 `SpawnService.test.ts` verifies filling empty cells, preserving existing colors and
 indices, both palette boundaries, repeated calls, and an empty board.
-`BoardController` tests call `processClick` and then `applyTurnResult`, matching the
+`BoardController` tests call `processClick` and then await `applyTurnResult`, matching the
 separate calculation and rendering phases. Booster input and level reset run through
-`GameInputController`. These checks verify synchronous click processing, refill followed by removal and
-combined falling (including an empty movement list), and ignoring invalid turns. `BoardModel` verifies that removal preserves
+`GameInputController`. These checks verify synchronous turn calculation, removal
+followed by awaited animations, refill and combined falling (including an empty
+movement list), and ignoring invalid turns. `BoardModel` verifies that removal preserves
 cell indices and the original array.
 `BoardEngine` tests cover connected color groups, row boundaries, diagonals,
 empty cells, invalid indices, reading current model data without changing it,
@@ -81,8 +83,8 @@ entries from a larger previous group never remove extra cells.
 ignored during falling, enabling input uses the current cell index, and unbinding
 or disposal removes only the service's subscriptions.
 
-Refill is integrated in `BoardController`: successful turns fill all empty cells,
-then remove the old tile views and start one combined fall. Tests cover full-board
+Refill is integrated in `BoardController`: successful turns wait for removal/merge
+and particles, fill all empty cells, then start one combined fall. Tests cover full-board
 refill, no existing moves, invalid turns, and reusing the spawn-index buffer.
 `SpawnService` returns the number of generated cells and optionally writes their
 indices in ascending order to a caller-owned buffer; only that prefix is valid.
@@ -94,7 +96,11 @@ spawn stacks, pooled tiles, creating distinct new tiles when the pool is empty,
 final cell bindings, landing bounces, input locking,
 layout changes and destruction. Removal checks cover the delayed particle start,
 shrinking and fading before returning a tile to its pool, warmed particle reuse,
-concurrent refill, and input remaining locked until both removal and falling finish.
+the lifetime of particles, and input remaining locked until all animations finish.
+Pipeline integration tests run the actual BoardController with BoardView and
+BoardTileRenderer: merge/removal and particles finish before any falling starts,
+the returned Promise resolves after the last landing bounce, and destroying the
+renderer cancels either phase without starting further work. Merge keeps tile scale.
 Pooling checks that require a released tile explicitly finish its removal first.
 This checks numeric animation behaviour, not
 actual rendering; visual validation still requires Cocos Preview.

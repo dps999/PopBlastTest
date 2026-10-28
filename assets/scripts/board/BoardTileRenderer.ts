@@ -73,6 +73,39 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
     private mergeTargetElapsed: number = 0;
     private mergeTargetStartScale: number = 1;
     private readonly mergeTargetDuration: number = 0.24;
+    private inputLocked: boolean = false;
+    private disposed: boolean = false;
+    private animationPromise: Promise<boolean> = null;
+    private animationResolver: (completed: boolean) => void = null;
+    private readonly animationExecutor = this.captureAnimationResolver.bind(this);
+
+    public setInputLocked(locked: boolean): void {
+        this.inputLocked = locked;
+        this.updateInputState();
+    }
+
+    public waitForAnimations(): Promise<boolean> {
+        if (this.disposed || !this.hasAnimations()) {
+            return Promise.resolve(!this.disposed);
+        }
+        if (!this.animationPromise) {
+            this.animationPromise = new Promise<boolean>(this.animationExecutor);
+        }
+        return this.animationPromise;
+    }
+
+    private captureAnimationResolver(resolve: (completed: boolean) => void): void {
+        this.animationResolver = resolve;
+    }
+
+    private finishAnimationWait(completed: boolean): void {
+        const resolve = this.animationResolver;
+        this.animationResolver = null;
+        this.animationPromise = null;
+        if (resolve) {
+            resolve(completed);
+        }
+    }
 
     public setSelectedCell(index: number): void {
         if (this.selectedIndex >= 0) {
@@ -187,6 +220,7 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
         this.mergeTargetTile = targetTile;
         this.mergeTargetElapsed = 0;
         this.mergeTargetStartScale = targetTile.node.scale;
+        this.inputService.setEnabled(false);
         for (let i = 0; i < count; i++) {
             this.startTileRemoval(indices[i], targetTile);
         }
@@ -344,7 +378,6 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
                 const targetNode = state.targetTile.node;
                 tile.node.x = state.startX + (targetNode.x - state.startX) * progress;
                 tile.node.y = state.startY + (targetNode.y - state.startY) * progress;
-                tile.node.scale = state.startScale * (1 - progress);
                 tile.node.opacity = 255 * Math.min(1, (1 - progress) * 4);
             } else {
                 tile.node.scale = state.startScale * (1 - progress);
@@ -393,6 +426,9 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
             this.activeParticleSystems[lastActiveIndex] = null;
         }
 
+        if (!this.hasAnimations()) {
+            this.finishAnimationWait(true);
+        }
         this.updateInputState();
     }
 
@@ -423,14 +459,19 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
     }
 
     private updateInputState(): void {
-        if (this.inputService) {
-            this.inputService.setEnabled(
-                this.fallingCount === 0 && this.removalCount === 0
-            );
+        if (this.inputService && !this.disposed) {
+            this.inputService.setEnabled(!this.inputLocked && !this.hasAnimations());
         }
     }
 
+    private hasAnimations(): boolean {
+        return this.fallingCount > 0 || this.removalCount > 0
+            || this.mergeTargetTile !== null || this.activeParticleCount > 0;
+    }
+
     protected onDestroy(): void {
+        this.disposed = true;
+        this.finishAnimationWait(false);
         this.setSelectedCell(-1);
         this.stopFalling();
         if (this.inputService) {

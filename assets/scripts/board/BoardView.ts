@@ -44,6 +44,14 @@ export default class BoardView extends cc.Component implements IBoardView, IInit
         this.tileRenderer.initRender(cells);
     }
 
+    public setInputLocked(locked: boolean): void {
+        this.tileRenderer.setInputLocked(locked);
+    }
+
+    public waitForAnimations(): Promise<boolean> {
+        return this.tileRenderer.waitForAnimations();
+    }
+
     public transformTile(index: number, value: number): void {
         this.tileRenderer.transformTile(index, value);
     }

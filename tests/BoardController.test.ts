@@ -16,7 +16,7 @@ Object.defineProperty(globalThis, "cc", {
 });
 
 describe("BoardController", () => {
-    it("processes the clicked cell synchronously", () => {
+    it("processes the clicked cell synchronously", async () => {
         const calls: string[] = [];
         let clickedIndex = -1;
         const controller = new BoardController(
@@ -31,7 +31,7 @@ describe("BoardController", () => {
             },
             new SpawnService(1)
         );
-        controller.applyTurnResult(controller.processClick(12));
+        await controller.applyTurnResult(controller.processClick(12));
         calls[calls.length] = "returned";
 
         assert.equal(clickedIndex, 12);
@@ -62,6 +62,8 @@ describe("BoardController", () => {
                 assert.deepEqual(renderedCells, [2, 0, 1]);
             },
             removeTiles(): void {},
+            setInputLocked(_locked: boolean): void {},
+            waitForAnimations(): Promise<boolean> { return Promise.resolve(true); },
             fallTiles(): void {}
         };
         const controller = new BoardController(model, view, {
@@ -95,6 +97,8 @@ describe("BoardController", () => {
                 renderedBoards[renderedBoards.length] = cells;
             },
             removeTiles(): void {},
+            setInputLocked(_locked: boolean): void {},
+            waitForAnimations(): Promise<boolean> { return Promise.resolve(true); },
             fallTiles(): void {}
         }, new BoardEngine(model, 3, 6), new SpawnService(1));
 
@@ -105,7 +109,7 @@ describe("BoardController", () => {
         assert.deepEqual(renderedBoards[0], [0, 0, 0, 0, 0, 0]);
     });
 
-    it("removes tiles before moving them and ignores an invalid turn", () => {
+    it("removes tiles before moving them and ignores an invalid turn", async () => {
         const calls: string[] = [];
         const removedIndices = [0, 1, 4, 5];
         const matchCount = 2;
@@ -120,6 +124,8 @@ describe("BoardController", () => {
                     assert.equal(count, matchCount);
                     calls[calls.length] = "remove";
                 },
+                setInputLocked(_locked: boolean): void {},
+                waitForAnimations(): Promise<boolean> { return Promise.resolve(true); },
                 fallTiles(actualMoves: CellMove[], count: number): void {
                     assert.strictEqual(actualMoves, moves);
                     assert.equal(count, moveCount);
@@ -136,20 +142,20 @@ describe("BoardController", () => {
 
         const result = controller.processClick(0);
         assert.deepEqual(calls, []);
-        controller.applyTurnResult(result);
+        await controller.applyTurnResult(result);
         assert.deepEqual(calls, ["remove", "fall"]);
 
         moveCount = 0;
-        controller.applyTurnResult(controller.processClick(0));
+        await controller.applyTurnResult(controller.processClick(0));
         assert.deepEqual(calls, ["remove", "fall", "remove", "fall"]);
 
-        controller.applyTurnResult(controller.processClick(3));
+        await controller.applyTurnResult(controller.processClick(3));
         assert.equal(calls.length, 4);
         assert.equal(moves.length, 2);
     });
 });
 
-it("refills a complete turn and reuses only the current spawn prefix", function completeTurn(): void {
+it("refills a complete turn and reuses only the current spawn prefix", async function completeTurn(): Promise<void> {
     const model = new BoardModel(4, 2);
     const cells = model.getCells();
     let renderCalls = 0;
@@ -161,8 +167,10 @@ it("refills a complete turn and reuses only the current spawn prefix", function 
     const controller = new BoardController(model, {
         initRender(): void { renderCalls++; },
         removeTiles(): void {
-            assert.ok(model.getCells().every(function filled(color) { return color >= 0; }));
+            assert.ok(model.getCells().some(function empty(color) { return color < 0; }));
         },
+        setInputLocked(_locked: boolean): void {},
+        waitForAnimations(): Promise<boolean> { return Promise.resolve(true); },
         fallTiles(moves, moveCount, actualCells, indices, count): void {
             assert.strictEqual(actualCells, model.getCells());
             assert.deepEqual(indices.slice(0, count), expectedSpawns);
@@ -187,27 +195,29 @@ it("refills a complete turn and reuses only the current spawn prefix", function 
     const current = model.getCells();
     current.splice(0, 8, 1, 2, 1, 3, 4, 2, 3, 4);
     expectedSpawns = [4, 6];
-    controller.applyTurnResult(controller.processClick(0));
+    await controller.applyTurnResult(controller.processClick(0));
     assert.deepEqual(current, [4, 2, 3, 3, 0, 2, 0, 4]);
 
     current[5] = 4;
     expectedSpawns = [5, 7];
-    controller.applyTurnResult(controller.processClick(7));
+    await controller.applyTurnResult(controller.processClick(7));
     assert.deepEqual(current, [4, 2, 3, 3, 0, 0, 0, 0]);
 
-    controller.applyTurnResult(controller.processClick(-1));
+    await controller.applyTurnResult(controller.processClick(-1));
     assert.equal(renderCalls, 1);
     assert.equal(fallCalls, 2);
     assert.equal(spawnCalls, 3);
     assert.notStrictEqual(cells, current);
 });
 
-it("refills a completely cleared board", function refillWholeBoard(): void {
+it("refills a completely cleared board", async function refillWholeBoard(): Promise<void> {
     const model = new BoardModel(2, 2);
     let falls = 0;
     const controller = new BoardController(model, {
         initRender(): void {},
         removeTiles(_indices, count): void { assert.equal(count, 4); },
+        setInputLocked(_locked: boolean): void {},
+        waitForAnimations(): Promise<boolean> { return Promise.resolve(true); },
         fallTiles(_moves, moveCount, cells, indices, count): void {
             falls++;
             assert.equal(moveCount, 0);
@@ -217,6 +227,6 @@ it("refills a completely cleared board", function refillWholeBoard(): void {
         }
     }, new BoardEngine(model, 2, 4), new SpawnService(1));
     controller.init();
-    controller.applyTurnResult(controller.processClick(0));
+    await controller.applyTurnResult(controller.processClick(0));
     assert.equal(falls, 1);
 });

@@ -45,6 +45,9 @@ class BoardViewStub {
     public swapTiles(): void {}
     public fallTiles(): void {}
     public renderButton(): void {}
+    public setInputLocked(_locked: boolean): void {}
+    public waitForAnimations(): Promise<boolean> { return Promise.resolve(true); }
+    public mergeTiles(): void { this.removeTiles(); }
 
     public setSelectedCell(index: number): void {
         this.selected = index;
@@ -105,7 +108,7 @@ class ScoringFixture {
     }
 }
 
-it("starts the HUD at zero and scores a group once before rendering its removal", function ordinaryGroup() {
+it("starts the HUD at zero and scores a group once after its animation pipeline", async function ordinaryGroup(): Promise<void> {
     const fixture = new ScoringFixture(7);
     assert.equal(fixture.label.string, "0");
     assert.equal(fixture.label.writes, 1);
@@ -115,56 +118,60 @@ it("starts the HUD at zero and scores a group once before rendering its removal"
     cells[1] = 0;
     cells[2] = 0;
     cells[3] = 1;
-    fixture.input.onCellClicked(0);
+    const turn = fixture.input.onCellClicked(0);
+    assert.equal(fixture.gameModel.getScore(), 0);
+    await fixture.input.onCellClicked(4);
+    assert.equal(fixture.boardView.removals, 1);
+    await turn;
     assert.equal(fixture.gameModel.getScore(), 21);
     assert.equal(fixture.label.string, "21");
     assert.equal(fixture.label.writes, 2);
     assert.equal(fixture.boardView.removals, 1);
-    assert.equal(fixture.boardView.scoreAtRemoval, "21");
-    fixture.input.onCellClicked(3);
-    fixture.input.onCellClicked(-1);
+    assert.equal(fixture.boardView.scoreAtRemoval, "0");
+    await fixture.input.onCellClicked(3);
+    await fixture.input.onCellClicked(-1);
     assert.equal(fixture.gameModel.getScore(), 21);
     assert.equal(fixture.label.writes, 2);
     assert.equal(fixture.gameModel.getMovesLeft(), 3);
 });
 
-it("excludes the newly created super tile and adds its later activation to the total", function transformation() {
+it("excludes the newly created super tile and adds its later activation to the total", async function transformation(): Promise<void> {
     const fixture = new ScoringFixture();
     const cells = fixture.boardModel.getCells();
     cells.fill(2);
     cells.fill(0, 0, 5);
-    fixture.input.onCellClicked(0);
+    await fixture.input.onCellClicked(0);
     assert.equal(cells[0], 3);
     assert.equal(fixture.gameModel.getScore(), 40);
     assert.equal(fixture.label.string, "40");
-    fixture.input.onCellClicked(0);
+    await fixture.input.onCellClicked(0);
     assert.equal(fixture.gameModel.getScore(), 90);
     assert.equal(fixture.label.string, "90");
     assert.equal(fixture.label.writes, 3);
 });
 
-it("counts overlapping super tile chains once per removed cell", function superTileChain() {
+it("counts overlapping super tile chains once per removed cell", async function superTileChain(): Promise<void> {
     const fixture = new ScoringFixture();
     const cells = fixture.boardModel.getCells();
     cells.fill(0);
     cells[12] = 3;
     cells[13] = 4;
-    fixture.input.onCellClicked(12);
+    await fixture.input.onCellClicked(12);
     assert.equal(fixture.gameModel.getScore(), 90);
     assert.equal(fixture.label.string, "90");
     assert.equal(fixture.label.writes, 2);
 });
 
-it("scores a bomb and its super tile chain through the same presenter", function bomb() {
+it("scores a bomb and its super tile chain through the same presenter", async function bomb(): Promise<void> {
     const fixture = new ScoringFixture();
     const cells = fixture.boardModel.getCells();
     cells.fill(0);
     cells[12] = 3;
     cells[13] = 4;
     fixture.boosters.selectBooster(0);
-    fixture.input.onCellClicked(-1);
+    await fixture.input.onCellClicked(-1);
     assert.equal(fixture.label.string, "0");
-    fixture.input.onCellClicked(12);
+    await fixture.input.onCellClicked(12);
     // Square (9), row (2 extra), column (2 extra).
     assert.equal(fixture.gameModel.getScore(), 130);
     assert.equal(fixture.label.string, "130");
@@ -173,19 +180,19 @@ it("scores a bomb and its super tile chain through the same presenter", function
     assert.equal(fixture.boosters.isActive(), false);
 });
 
-it("does not award points for teleport selection, cancellation or the completed swap", function teleport() {
+it("does not award points for teleport selection, cancellation or the completed swap", async function teleport(): Promise<void> {
     const fixture = new ScoringFixture();
     const cells = fixture.boardModel.getCells();
     cells[0] = 0;
     cells[24] = 1;
     fixture.boosters.selectBooster(1);
-    fixture.input.onCellClicked(0);
+    await fixture.input.onCellClicked(0);
     assert.equal(fixture.boardView.selected, 0);
     assert.equal(fixture.label.writes, 1);
-    fixture.input.onCellClicked(0);
+    await fixture.input.onCellClicked(0);
     assert.equal(fixture.boardView.selected, -1);
-    fixture.input.onCellClicked(0);
-    fixture.input.onCellClicked(24);
+    await fixture.input.onCellClicked(0);
+    await fixture.input.onCellClicked(24);
     assert.equal(cells[0], 1);
     assert.equal(cells[24], 0);
     assert.equal(fixture.gameModel.getScore(), 0);
