@@ -24,6 +24,7 @@ export class GameFactory {
     public static createBoard(
         view: BoardView,
         tilePrefab: cc.Prefab,
+        tileRemovalParticlePrefab: cc.Prefab,
         colorSprites: cc.SpriteFrame[],
         config: GameConfig,
         superTilePrefabs: cc.Prefab[],
@@ -63,7 +64,8 @@ export class GameFactory {
             superTiles: superTiles.creation,
             colorSprites,
             config,
-            inputService
+            inputService,
+            tileRemovalParticlePrefab
         });
         view.init({ tileRenderer, colorSprites, config });
         boostersView.init(boosters, definitions);

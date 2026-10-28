@@ -1,10 +1,10 @@
 import type { ISuperTileCreationStrategy } from "../superTiles/SuperTileStrategies";
-import type { IInitializable } from "../core/GameFactory";
 import type { GameConfig } from "../core/GameConfig";
 import type Tile from "../tiles/Tile";
 import type { TilePool } from "../tiles/TilePool";
 import type { BoardInputService } from "./BoardInputService";
 import type { CellMove } from "./IBoardEngine";
+import type { IInitializable } from "../core/GameFactory";
 
 export interface BoardTileRendererDependencies {
     tilePool: TilePool;
@@ -12,6 +12,13 @@ export interface BoardTileRendererDependencies {
     colorSprites: cc.SpriteFrame[];
     config: GameConfig;
     inputService: BoardInputService;
+    tileRemovalParticlePrefab: cc.Prefab;
+}
+
+interface TileRemovalState {
+    tile: Tile;
+    elapsed: number;
+    startScale: number;
 }
 
 const { ccclass, property, disallowMultiple } = cc._decorator;
@@ -46,10 +53,17 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
         duration: number;
     }[] = [];
     private fallingCount: number = 0;
+    private removalStates: TileRemovalState[] = [];
+    private removalCount: number = 0;
+    private particlePool: cc.NodePool = new cc.NodePool();
+    private activeParticleSystems: cc.ParticleSystem[] = [];
+    private activeParticleCount: number = 0;
+    private tileRemovalParticlePrefab: cc.Prefab;
     private columnSpawnCounts: number[] = [];
     private selectedIndex: number = -1;
     private readonly selectedColor: cc.Color = cc.color(255, 225, 100);
     private readonly originalColor: cc.Color = cc.color(255, 255, 255);
+    private readonly removalDuration: number = 0.36;
 
     public setSelectedCell(index: number): void {
         if (this.selectedIndex >= 0) {
@@ -84,9 +98,15 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
         this.colorSprites = dependencies.colorSprites;
         this.config = dependencies.config;
         this.inputService = dependencies.inputService;
+        this.tileRemovalParticlePrefab = dependencies.tileRemovalParticlePrefab;
+        if (!this.tileRemovalParticlePrefab) {
+            throw new Error("BoardTileRenderer requires a tile removal particle prefab.");
+        }
         const cellCount = this.config.boardRows * this.config.boardColumns;
         this.tiles = new Array<Tile>(cellCount).fill(null);
         this.fallingStates = new Array(cellCount);
+        this.removalStates = new Array<TileRemovalState>(cellCount);
+        this.activeParticleSystems = new Array<cc.ParticleSystem>(cellCount);
         // Состояния выделяются один раз при инициализации и переиспользуются во всех ходах.
         for (let i = 0; i < cellCount; i++) {
             this.fallingStates[i] = {
@@ -96,6 +116,18 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
                 elapsed: 0,
                 duration: 0
             };
+            this.removalStates[i] = { tile: null, elapsed: 0, startScale: 1 };
+        }
+        // Прогреваем пул один раз, чтобы уничтожение тайлов не создавало узлы в игровом цикле.
+        for (let i = 0; i < cellCount; i++) {
+            const node = cc.instantiate(this.tileRemovalParticlePrefab);
+            const particleSystem = node.getComponent(cc.ParticleSystem);
+            if (!particleSystem) {
+                throw new Error("Tile removal particle prefab must contain cc.ParticleSystem.");
+            }
+            particleSystem.playOnLoad = false;
+            node.active = false;
+            this.particlePool.put(node);
         }
         this.columnSpawnCounts = new Array<number>(this.config.boardColumns).fill(0);
     }
@@ -124,11 +156,11 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
 
     public removeTiles(indices: number[], count: number): void {
         for (let i = 0; i < count; i++) {
-            this.releaseTile(indices[i]);
+            this.startTileRemoval(indices[i]);
         }
     }
 
-    private releaseTile(index: number): void {
+    private startTileRemoval(index: number): void {
         if (index === this.selectedIndex) {
             this.setSelectedCell(-1);
         }
@@ -137,8 +169,34 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
             return;
         }
         this.inputService.unbind(tile.sprite.node);
-        this.tilePool.release(tile);
         this.tiles[index] = null;
+        const state = this.removalStates[this.removalCount++];
+        state.tile = tile;
+        state.elapsed = 0;
+        state.startScale = tile.node.scale;
+        this.spawnParticles(tile);
+        this.inputService.setEnabled(false);
+    }
+
+    private spawnParticles(tile: Tile): void {
+        if (this.activeParticleCount >= this.activeParticleSystems.length) {
+            return;
+        }
+        const node = this.particlePool.get();
+        if (!node) {
+            return;
+        }
+        const particleSystem = node.getComponent(cc.ParticleSystem);
+        if (!particleSystem) {
+            this.particlePool.put(node);
+            return;
+        }
+        node.parent = this.initialPoint;
+        node.setPosition(tile.node.x, tile.node.y);
+        particleSystem.spriteFrame = tile.sprite.spriteFrame;
+        node.active = true;
+        particleSystem.resetSystem();
+        this.activeParticleSystems[this.activeParticleCount++] = particleSystem;
     }
 
     public fallTiles(
@@ -205,10 +263,6 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
     }
 
     protected update(deltaTime: number): void {
-        if (this.fallingCount === 0) {
-            return;
-        }
-
         for (let i = 0; i < this.fallingCount;) {
             const state = this.fallingStates[i];
             const tile = state.tile;
@@ -242,9 +296,44 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
             this.fallingStates[lastActiveIndex] = state;
         }
 
-        if (this.fallingCount === 0) {
-            this.inputService.setEnabled(true);
+        for (let i = 0; i < this.removalCount;) {
+            const state = this.removalStates[i];
+            const tile = state.tile;
+            const elapsed = state.elapsed + deltaTime;
+            const progress = Math.min(1, elapsed / this.removalDuration);
+            state.elapsed = elapsed;
+            const pulse = 1 + 0.12 * Math.sin(progress * Math.PI);
+            const remaining = 1 - progress;
+            tile.node.scale = state.startScale * pulse * remaining * remaining;
+            tile.node.opacity = 255 * (1 - progress);
+            if (progress < 1) {
+                i++;
+                continue;
+            }
+            tile.node.scale = 1;
+            tile.node.opacity = 255;
+            this.tilePool.release(tile);
+            state.tile = null;
+            const lastActiveIndex = --this.removalCount;
+            this.removalStates[i] = this.removalStates[lastActiveIndex];
+            this.removalStates[lastActiveIndex] = state;
         }
+
+        for (let i = 0; i < this.activeParticleCount;) {
+            const particleSystem = this.activeParticleSystems[i];
+            if (!particleSystem.stopped || particleSystem.particleCount > 0) {
+                i++;
+                continue;
+            }
+            const node = particleSystem.node;
+            node.active = false;
+            this.particlePool.put(node);
+            const lastActiveIndex = --this.activeParticleCount;
+            this.activeParticleSystems[i] = this.activeParticleSystems[lastActiveIndex];
+            this.activeParticleSystems[lastActiveIndex] = null;
+        }
+
+        this.updateInputState();
     }
 
     private refreshTilesLayout(): void {
@@ -270,8 +359,14 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
             this.fallingStates[i].tile = null;
         }
         this.fallingCount = 0;
+        this.updateInputState();
+    }
+
+    private updateInputState(): void {
         if (this.inputService) {
-            this.inputService.setEnabled(true);
+            this.inputService.setEnabled(
+                this.fallingCount === 0 && this.removalCount === 0
+            );
         }
     }
 
@@ -281,5 +376,6 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
         if (this.inputService) {
             this.inputService.dispose();
         }
+        this.particlePool.clear();
     }
 }

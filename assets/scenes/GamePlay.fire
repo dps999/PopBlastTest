@@ -1530,6 +1530,9 @@
     "tilePrefab": {
       "__uuid__": "9036705a-54f2-4a1d-b95b-bbb6ec60a3f7"
     },
+    "tileRemovalParticlePrefab": {
+      "__uuid__": "efa42659-2bf0-4354-8c59-f5797689691d"
+    },
     "colorSprites": [
       {
         "__uuid__": "1ef23caa-7783-4ea3-aa3b-befa227a0e9b"
