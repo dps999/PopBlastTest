@@ -2189,7 +2189,11 @@
     "movesLabel": {
       "__id__": 67
     },
-    "continueEvents": [],
+    "continueEvents": [
+      {
+        "__id__": 112
+      }
+    ],
     "_id": "106801c6-b9d6-48d0-9aa1-54089c693a49"
   },
   {
@@ -3999,7 +4003,7 @@
       "__id__": 53
     },
     "component": "GameOverPopupView",
-    "_componentId": "b8355fca-9b7d-4252-bb32-c608d0bde438",
+    "_componentId": "b8355/Km31CUrsyxgjQveQ4",
     "handler": "onContinueClicked",
     "customEventData": ""
   },
@@ -4698,5 +4702,15 @@
     "initialMoves": 2,
     "targetScore": 500,
     "pointsPerTile": 10
+  },
+  {
+    "__type__": "cc.ClickEvent",
+    "target": {
+      "__id__": 109
+    },
+    "component": "GameBootstrap",
+    "_componentId": "584d2R5+k5Ht7awwXrDRdQn",
+    "handler": "restartLevel",
+    "customEventData": ""
   }
 ]

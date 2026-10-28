@@ -40,6 +40,10 @@ export default class GameBootstrap extends cc.Component {
 
     private readonly session: GameSession = new GameSession();
 
+    public restartLevel(): void {
+        cc.director.loadScene(cc.director.getScene().name);
+    }
+
     protected onDestroy(): void {
         this.session.stop();
     }
