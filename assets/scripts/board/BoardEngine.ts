@@ -1,4 +1,6 @@
 import type { CellMove, IBoardEngine, TurnResult } from "./IBoardEngine";
+import type { SuperTileServices } from "../superTiles/SuperTileFactory";
+import type { EffectContext } from "../superTiles/SuperTileStrategies";
 import type { IBoardModel } from "./IBoardModel";
 
 /** Доменный сервис игровых правил поля. */
@@ -8,32 +10,103 @@ export class BoardEngine implements IBoardEngine {
     private readonly moves: CellMove[];
     private readonly matches: number[];
 
-    private visited: Uint8Array;
+    private readonly visited: Uint8Array;
+    private readonly targets: number[];
+    private readonly context: EffectContext;
+    private readonly superTiles: SuperTileServices;
+    private readonly result: TurnResult;
 
-    constructor(model: IBoardModel, columns: number, capacity: number) {
+
+    constructor(model: IBoardModel, columns: number, capacity: number, superTiles?: SuperTileServices) {
         this.model = model;
         this.columns = columns;
-        this.visited = new Uint8Array(model.getCells().length);
+        this.visited = new Uint8Array(capacity);
+        this.targets = new Array<number>(capacity).fill(0);
+        this.context = { columns, capacity };
+        this.superTiles = superTiles;
         this.matches = new Array<number>(capacity).fill(0);
         this.moves = new Array<CellMove>(capacity);
         for (let i = 0; i < capacity; i++) {
             this.moves[i] = { from: 0, to: 0 };
         }
+        this.result = {
+            valid: false, removedIndices: this.matches, matchCount: 0, removedCount: 0,
+            transformedIndex: -1, transformedKind: 0, moves: this.moves, moveCount: 0
+        };
     }
 
     public processClick(index: number): TurnResult {
-        const matchCount = this.findGroup(index, this.matches);
-
-        if (matchCount < 2) {
-            return { valid: false, removedIndices: this.matches, matchCount: 0, moves: this.moves, moveCount: 0 };
+        const result = this.result;
+        result.valid = false;
+        result.matchCount = 0;
+        result.removedCount = 0;
+        result.moveCount = 0;
+        result.transformedIndex = -1;
+        result.transformedKind = 0;
+        const cells = this.model.getCells();
+        if (!Number.isInteger(index) || index < 0 || index >= cells.length || cells[index] < 0) {
+            return result;
         }
+        const kinds = this.model.getTileKinds();
+        let removedCount = 0;
+        if (kinds[index] !== 0) {
+            removedCount = this.collectChain(index);
+        } else {
+            const count = this.findGroup(index, this.matches);
+            if (count < 2) {
+                return result;
+            }
+            result.matchCount = count;
+            const kind = this.superTiles ? this.superTiles.creation.selectKind(count) : 0;
+            for (let i = 0; i < count; i++) {
+                const matched = this.matches[i];
+                if (kind === 0 || matched !== index) {
+                    this.matches[removedCount++] = matched;
+                }
+            }
+            if (kind !== 0) {
+                this.model.transformCell(index, kind);
+                result.transformedIndex = index;
+                result.transformedKind = kind;
+            }
+        }
+        this.model.removeCells(this.matches, removedCount);
+        result.valid = true;
+        result.removedCount = removedCount;
+        result.moveCount = this.applyGravity();
+        return result;
+    }
 
-        this.model.removeCells(this.matches, matchCount);
-
-        const moveCount = this.applyGravity();
-
-        // Заполнение
-        return { valid: true, removedIndices: this.matches, matchCount, moves: this.moves, moveCount };
+    /** Массив удаления одновременно служит очередью: каждая клетка добавляется один раз. */
+    private collectChain(index: number): number {
+        if (!this.superTiles) {
+            throw new Error("Super tile services are required to activate a super tile.");
+        }
+        this.visited.fill(0);
+        this.matches[0] = index;
+        this.visited[index] = 1;
+        let count = 1;
+        const cells = this.model.getCells();
+        const kinds = this.model.getTileKinds();
+        for (let head = 0; head < count; head++) {
+            const origin = this.matches[head];
+            if (kinds[origin] === 0) {
+                continue;
+            }
+            const effect = this.superTiles.effects[kinds[origin]];
+            if (!effect) {
+                throw new Error("Unregistered super tile effect.");
+            }
+            const targetCount = effect.collectTargets(origin, this.context, this.targets);
+            for (let i = 0; i < targetCount; i++) {
+                const target = this.targets[i];
+                if (cells[target] >= 0 && !this.visited[target]) {
+                    this.visited[target] = 1;
+                    this.matches[count++] = target;
+                }
+            }
+        }
+        return count;
     }
 
     private applyGravity(): number {
@@ -67,34 +140,33 @@ export class BoardEngine implements IBoardEngine {
             return 0;
         }
 
-        const color = cells[index];
-        let matchCount = 0;
-        if (this.visited.length !== cells.length) {
-            this.visited = new Uint8Array(cells.length);
-        } else {
-            this.visited.fill(0);
+        const kinds = this.model.getTileKinds();
+        if (kinds[index] !== 0) {
+            return 0;
         }
-        const visited = this.visited;
+        this.visited.fill(0);
+        const color = cells[index];
+        matches[0] = index;
+        this.visited[index] = 1;
+        let count = 1;
+        for (let head = 0; head < count; head++) {
+            const current = matches[head];
+            const column = current % this.columns;
+            if (column > 0) count = this.visit(current - 1, color, matches, count);
+            if (column < this.columns - 1) count = this.visit(current + 1, color, matches, count);
+            count = this.visit(current - this.columns, color, matches, count);
+            count = this.visit(current + this.columns, color, matches, count);
+        }
+        return count >= 2 ? count : 0;
+    }
 
-        const visit = (i: number): void => {
-            if (i < 0 || i >= cells.length ||
-                visited[i] || cells[i] !== color)
-                return;
-
-            visited[i] = 1;
-            matches[matchCount++] = i;
-
-            const x = i % this.columns;
-
-            if (x > 0) visit(i - 1);
-            if (x < this.columns - 1) visit(i + 1);
-
-            visit(i - this.columns);
-            visit(i + this.columns);
-        };
-
-        visit(index);
-
-        return matchCount >= 2 ? matchCount : 0;
+    private visit(index: number, color: number, matches: number[], count: number): number {
+        const cells = this.model.getCells();
+        if (index >= 0 && index < cells.length && !this.visited[index]
+            && cells[index] === color && this.model.getTileKinds()[index] === 0) {
+            this.visited[index] = 1;
+            matches[count++] = index;
+        }
+        return count;
     }
 }

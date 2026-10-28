@@ -30,7 +30,7 @@ function createBoard(values: number[], columns: number): { model: BoardModel; en
 
 function createEngine(cells: number[], columns: number): BoardEngine {
     return new BoardEngine({
-        init(): void {},
+        init(): void {}, getTileKinds(): number[] { return new Array(100).fill(0); }, transformCell(): void {},
         getCells(): number[] {
             return cells;
         },
@@ -50,7 +50,7 @@ describe("BoardEngine", () => {
     it("adapts the visited buffer when the model is initialized after the engine", () => {
         let cells: number[] = [];
         const engine = new BoardEngine({
-            init(): void {},
+            init(): void {}, getTileKinds(): number[] { return new Array(100).fill(0); }, transformCell(): void {},
             getCells(): number[] {
                 return cells;
             },

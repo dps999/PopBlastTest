@@ -18,7 +18,11 @@ export default class GameBootstrap extends cc.Component {
     @property([cc.SpriteFrame])
     private colorSprites: cc.SpriteFrame[] = [];
 
+    /** Порядок: ряд, столбец, радиус, всё поле. */
+    @property([cc.SpriteFrame])
+    private superTileSprites: cc.SpriteFrame[] = [];
+
     protected start(): void {
-        GameFactory.createBoard(this.boardView, this.tilePrefab, this.colorSprites, this.config);
+        GameFactory.createBoard(this.boardView, this.tilePrefab, this.colorSprites, this.config, this.superTileSprites);
     }
 }

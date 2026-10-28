@@ -22,8 +22,8 @@ export class BoardController implements IBoardController {
         this.model.init();
         const cells = this.model.getCells();
         this.spawnedIndices = new Array<number>(cells.length).fill(0);
-        this.spawnService.spawn(cells);
-        this.view.initRender(cells);
+        this.spawnService.spawn(cells, undefined, this.model.getTileKinds());
+        this.view.initRender(cells, this.model.getTileKinds());
     }
 
     public onCellClicked(index: number): void {
@@ -33,8 +33,11 @@ export class BoardController implements IBoardController {
         }
 
         const cells = this.model.getCells();
-        const spawnCount = this.spawnService.spawn(cells, this.spawnedIndices);
-        this.view.removeTiles(result.removedIndices, result.matchCount);
-        this.view.fallTiles(result.moves, result.moveCount, cells, this.spawnedIndices, spawnCount);
+        const spawnCount = this.spawnService.spawn(cells, this.spawnedIndices, this.model.getTileKinds());
+        this.view.removeTiles(result.removedIndices, result.removedCount);
+        if (result.transformedIndex >= 0) {
+            this.view.transformTile(result.transformedIndex, result.transformedKind);
+        }
+        this.view.fallTiles(result.moves, result.moveCount, cells, this.spawnedIndices, spawnCount, this.model.getTileKinds());
     }
 }

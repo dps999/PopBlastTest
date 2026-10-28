@@ -1,3 +1,4 @@
+import { SuperTileFactory } from "../superTiles/SuperTileFactory";
 import { BoardController } from "../board/BoardController";
 import { BoardModel } from "../board/BoardModel";
 import BoardView from "../board/BoardView";
@@ -19,7 +20,8 @@ export class GameFactory {
         view: BoardView,
         tilePrefab: cc.Prefab,
         colorSprites: cc.SpriteFrame[],
-        config: GameConfig
+        config: GameConfig,
+        superTileSprites: cc.SpriteFrame[]
     ): BoardController {
         if (config.colorCount < 2 || config.colorCount > 5 || config.colorCount % 1 !== 0) {
             throw new Error("Level color count must be an integer from 2 to 5.");
@@ -42,6 +44,7 @@ export class GameFactory {
         const tileRenderer = view.getComponent(BoardTileRenderer) || view.addComponent(BoardTileRenderer);
         tileRenderer.init({
             tilePool,
+            superTileSprites,
             colorSprites,
             config,
             inputService

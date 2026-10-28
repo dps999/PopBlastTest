@@ -20,7 +20,7 @@ describe("BoardController", () => {
         const calls: string[] = [];
         let clickedIndex = -1;
         const controller = new BoardController(
-            { init(): void {}, getCells(): number[] { return []; }, removeCells(): void {}, moveCell(): void {} },
+            { init(): void {}, getTileKinds(): number[] { return new Array(100).fill(0); }, transformCell(): void {}, getCells(): number[] { return []; }, removeCells(): void {}, moveCell(): void {} },
             { initRender(): void {}, removeTiles(): void {}, fallTiles(): void {} },
             {
                 processClick(index: number) {
@@ -43,6 +43,8 @@ describe("BoardController", () => {
         const cells = [-1, -1, -1];
         let currentCells: number[] = [];
         const model = {
+            getTileKinds(): number[] { return new Array(100).fill(0); },
+            transformCell(): void {},
             init(): void {
                 calls.push("init");
                 currentCells = cells;
@@ -111,7 +113,7 @@ describe("BoardController", () => {
         const moves: CellMove[] = [{ from: 3, to: 0 }, { from: 4, to: 1 }];
         let moveCount = 2;
         const controller = new BoardController(
-            { init(): void {}, getCells(): number[] { return []; }, removeCells(): void {}, moveCell(): void {} },
+            { init(): void {}, getTileKinds(): number[] { return new Array(100).fill(0); }, transformCell(): void {}, getCells(): number[] { return []; }, removeCells(): void {}, moveCell(): void {} },
             {
                 initRender(): void {},
                 removeTiles(indices: number[], count: number): void {
@@ -127,7 +129,7 @@ describe("BoardController", () => {
             },
             {
                 processClick(index: number) {
-                    return { valid: index === 0, removedIndices, matchCount, moves, moveCount };
+                    return { valid: index === 0, removedIndices, matchCount, removedCount: matchCount, transformedIndex: -1, transformedKind: 0, moves, moveCount };
                 }
             },
             new SpawnService(1)

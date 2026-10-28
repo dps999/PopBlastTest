@@ -68,7 +68,7 @@ function createView(rows, columns, cells) {
     const colorSprites = ["red", "blue", "green"];
     const tileRenderer = new BoardTileRenderer();
     tileRenderer.fallSpeed = 10;
-    tileRenderer.init({ tilePool: pool, colorSprites, config, inputService: input });
+    tileRenderer.init({ tilePool: pool, colorSprites, superTileSprites: ["row", "column", "radius", "board"], config, inputService: input });
     view.init({ tileRenderer, colorSprites, config });
     view.initRender(cells);
     return { view, input, released, pool };
@@ -94,8 +94,8 @@ it("falls existing and pooled new tiles together and waits for the final landing
     assert.equal(input.enabled, false);
 
     stepView(view, 0.5);
-    assert.equal(existing.node.y, 5);
-    assert.equal(fresh.node.y, 25);
+    assert.equal(existing.node.y, 7.5);
+    assert.equal(fresh.node.y, 27.5);
     stepView(view, 0.58);
     assert.ok(existing.node.y > 0);
     assert.ok(fresh.node.y > 20);
@@ -167,7 +167,7 @@ it("creates new tiles for empty cells when no released items are available", fun
     assert.equal(input.enabled, false);
 
     stepView(view, 0.5);
-    assert.deepEqual(view.tileRenderer.tiles.map(function y(tile) { return tile.node.y; }), [0, 15, 15, 25]);
+    assert.deepEqual(view.tileRenderer.tiles.map(function y(tile) { return tile.node.y; }), [0, 18.75, 17.5, 28.75]);
     stepView(view, 100);
     assert.deepEqual(view.tileRenderer.tiles.map(function y(tile) { return tile.node.y; }), [0, 0, 10, 10]);
     assert.equal(input.enabled, true);
@@ -211,9 +211,9 @@ it("keeps a dense active prefix and reuses every state across turns", function r
     stepView(view, 1.2);
     assert.equal(view.tileRenderer.fallingCount, 3);
     assert.equal(input.enabled, false);
-    assert.ok(Math.abs(view.tileRenderer.tiles[1].node.y - 8) < 1e-10);
-    assert.ok(Math.abs(view.tileRenderer.tiles[3].node.y - 18) < 1e-10);
-    assert.ok(Math.abs(view.tileRenderer.tiles[5].node.y - 28) < 1e-10);
+    assert.ok(Math.abs(view.tileRenderer.tiles[1].node.y - 12.8) < 1e-10);
+    assert.ok(Math.abs(view.tileRenderer.tiles[3].node.y - 22.8) < 1e-10);
+    assert.ok(Math.abs(view.tileRenderer.tiles[5].node.y - 32.8) < 1e-10);
     for (let i = 0; i < buffer.length; i++) {
         assert.equal(buffer[i].tile !== null, i < view.tileRenderer.fallingCount);
         if (i < view.tileRenderer.fallingCount) {
@@ -222,9 +222,9 @@ it("keeps a dense active prefix and reuses every state across turns", function r
     }
 
     stepView(view, 0.3);
-    assert.equal(view.tileRenderer.tiles[1].node.y, 5);
-    assert.equal(view.tileRenderer.tiles[3].node.y, 15);
-    assert.equal(view.tileRenderer.tiles[5].node.y, 25);
+    assert.equal(view.tileRenderer.tiles[1].node.y, 8.75);
+    assert.equal(view.tileRenderer.tiles[3].node.y, 18.75);
+    assert.equal(view.tileRenderer.tiles[5].node.y, 28.75);
     stepView(view, 100);
     assert.equal(view.tileRenderer.fallingCount, 0);
     assert.equal(input.enabled, true);
@@ -236,8 +236,8 @@ it("keeps a dense active prefix and reuses every state across turns", function r
     assert.equal(buffer[0].elapsed, 0);
     assert.equal(buffer[1].elapsed, 0);
     stepView(view, 0.5);
-    assert.equal(view.tileRenderer.tiles[4].node.y, 25);
-    assert.equal(view.tileRenderer.tiles[5].node.y, 25);
+    assert.equal(view.tileRenderer.tiles[4].node.y, 27.5);
+    assert.equal(view.tileRenderer.tiles[5].node.y, 27.5);
     view.tileRenderer.stopFalling();
     assert.equal(view.tileRenderer.fallingCount, 0);
     assert.ok(buffer.every(function idle(state) { return state.tile === null; }));
@@ -258,8 +258,25 @@ it("updates animations in BoardTileRenderer independently of BoardView", functio
     view.update();
     assert.equal(fresh.node.y, 20);
     renderer.update(0.5);
-    assert.equal(fresh.node.y, 15);
+    assert.equal(fresh.node.y, 17.5);
     renderer.update(100);
     assert.equal(fresh.node.y, 10);
     assert.equal(input.enabled, true);
+});
+
+
+it("preserves a transformed pooled tile through falling and resets its sprite on refill", function superTileRendering() {
+    const { view } = createView(2, 2, [0, 1, 2, 0]);
+    const superTile = view.tileRenderer.tiles[2];
+    view.removeTiles([0], 1);
+    view.transformTile(2, 1);
+    assert.equal(superTile.frame, "row");
+    view.fallTiles([{ from: 2, to: 0 }], 1, [0, 1, 2, 0], [2], 1, [1, 0, 0, 0]);
+    stepView(view, 100);
+    assert.strictEqual(view.tileRenderer.tiles[0], superTile);
+    assert.equal(superTile.frame, "row");
+    view.removeTiles([0], 1);
+    view.fallTiles([], 0, [1, 1, 2, 0], [0], 1, [0, 0, 0, 0]);
+    assert.strictEqual(view.tileRenderer.tiles[0], superTile);
+    assert.equal(superTile.frame, "blue");
 });

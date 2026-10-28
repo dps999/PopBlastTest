@@ -17,7 +17,7 @@
         "__id__": 2
       },
       {
-        "__id__": 32
+        "__id__": 33
       }
     ],
     "_active": true,
@@ -84,10 +84,10 @@
     "_active": true,
     "_components": [
       {
-        "__id__": 30
+        "__id__": 31
       },
       {
-        "__id__": 31
+        "__id__": 32
       }
     ],
     "_prefab": null,
@@ -1087,7 +1087,7 @@
         "__id__": 29
       },
       {
-        "__id__": 35
+        "__id__": 30
       }
     ],
     "_prefab": null,
@@ -1374,6 +1374,19 @@
     "_id": "2dd0P5fApBZZ8WzdSKhwJe"
   },
   {
+    "__type__": "d31ccRFbVROMoa4vFW6+S/0",
+    "_name": "",
+    "_objFlags": 0,
+    "node": {
+      "__id__": 23
+    },
+    "_enabled": true,
+    "fallSpeed": 800,
+    "landingBounceHeight": 5,
+    "landingBounceDuration": 0.1,
+    "_id": "75XRglZ0ZDgJysrdiDebib"
+  },
+  {
     "__type__": "cc.Canvas",
     "_name": "",
     "_objFlags": 0,
@@ -1428,7 +1441,7 @@
     "_active": true,
     "_components": [
       {
-        "__id__": 33
+        "__id__": 34
       }
     ],
     "_prefab": null,
@@ -1484,11 +1497,11 @@
     "_name": "",
     "_objFlags": 0,
     "node": {
-      "__id__": 32
+      "__id__": 33
     },
     "_enabled": true,
     "config": {
-      "__id__": 34
+      "__id__": 35
     },
     "boardView": {
       "__id__": 29
@@ -1513,11 +1526,24 @@
         "__uuid__": "8c849c89-c180-4074-a095-df59f3f9f6e7"
       }
     ],
+    "superTileSprites": [
+      {
+        "__uuid__": "d56ddfad-b011-4663-b853-94d060de7dc7"
+      },
+      {
+        "__uuid__": "6835de1f-fbfe-42d3-8f6e-7f99988347bd"
+      },
+      {
+        "__uuid__": "6a8fcb30-c333-413d-8999-630aa5babb24"
+      },
+      {
+        "__uuid__": "e73a6686-cf22-4d97-90ab-2d78fafe5634"
+      }
+    ],
     "_id": "fenDJPMhRMOIXlVtfK92cN"
   },
   {
     "__type__": "GameConfig",
-    "colorCount": 5,
     "superTileRules": [
       {
         "__id__": 36
@@ -1534,19 +1560,27 @@
     ],
     "superTileRadius": 1,
     "boardRows": 9,
-    "boardColumns": 9
+    "boardColumns": 9,
+    "colorCount": 3
   },
   {
-    "__type__": "d31ccRFbVROMoa4vFW6+S/0",
-    "_name": "",
-    "_objFlags": 0,
-    "node": {
-      "__id__": 23
-    },
-    "_enabled": true,
-    "fallSpeed": 800,
-    "landingBounceHeight": 5,
-    "landingBounceDuration": 0.1,
-    "_id": ""
+    "__type__": "SuperTileRuleConfig",
+    "kind": 1,
+    "minimumGroupSize": 5
+  },
+  {
+    "__type__": "SuperTileRuleConfig",
+    "kind": 2,
+    "minimumGroupSize": 5
+  },
+  {
+    "__type__": "SuperTileRuleConfig",
+    "kind": 3,
+    "minimumGroupSize": 7
+  },
+  {
+    "__type__": "SuperTileRuleConfig",
+    "kind": 4,
+    "minimumGroupSize": 10
   }
 ]

@@ -7,6 +7,7 @@ import type { CellMove } from "./IBoardEngine";
 
 export interface BoardTileRendererDependencies {
     tilePool: TilePool;
+    superTileSprites?: cc.SpriteFrame[];
     colorSprites: cc.SpriteFrame[];
     config: GameConfig;
     inputService: BoardInputService;
@@ -27,6 +28,7 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
     private landingBounceDuration: number = 0.16;
 
     private tilePool: TilePool;
+    private superTileSprites: cc.SpriteFrame[];
     private colorSprites: cc.SpriteFrame[];
     private config: GameConfig;
     private inputService: BoardInputService;
@@ -47,6 +49,7 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
 
     public init(dependencies: BoardTileRendererDependencies): void {
         this.tilePool = dependencies.tilePool;
+        this.superTileSprites = dependencies.superTileSprites;
         this.colorSprites = dependencies.colorSprites;
         this.config = dependencies.config;
         this.inputService = dependencies.inputService;
@@ -74,12 +77,18 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
         this.refreshTilesLayout();
     }
 
-    public initRender(cells: number[]): void {
+    public initRender(cells: number[], kinds?: number[]): void {
         for (let i = 0; i < cells.length; i++) {
             if (cells[i] !== -1) {
-                this.spawnTile(i, cells[i]);
+                this.spawnTile(i, cells[i], kinds ? kinds[i] : 0);
             }
         }
+    }
+
+    public transformTile(index: number, kind: number): void {
+        const tile = this.tiles[index];
+        tile.setSprite(this.superTileSprites[kind - 1]);
+        tile.setSize(this.tileSize);
     }
 
     public removeTiles(indices: number[], count: number): void {
@@ -101,7 +110,8 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
         moveCount: number,
         cells: number[],
         spawnedIndices: number[],
-        spawnCount: number
+        spawnCount: number,
+        kinds?: number[]
     ): void {
         if (this.fallingCount > 0) {
             this.refreshTilesLayout();
@@ -128,15 +138,15 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
             const spawnRow = this.config.boardRows + this.columnSpawnCounts[column];
             this.columnSpawnCounts[column]++;
 
-            const tile = this.spawnTile(index, cells[index]);
+            const tile = this.spawnTile(index, cells[index], kinds ? kinds[index] : 0);
             tile.node.y = spawnRow * this.rowStep;
             this.startFalling(tile, index);
         }
     }
 
-    private spawnTile(index: number, color: number): Tile {
+    private spawnTile(index: number, color: number, kind: number = 0): Tile {
         const tile = this.tilePool.get();
-        tile.setSprite(this.colorSprites[color]);
+        tile.setSprite(kind === 0 ? this.colorSprites[color] : this.superTileSprites[kind - 1]);
         this.layoutTile(tile, index);
         this.tiles[index] = tile;
         this.inputService.bind(tile.sprite.node, index);
