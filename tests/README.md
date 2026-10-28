@@ -19,8 +19,8 @@ The suite covers `GameModel`, the initial state and instance isolation of
 color generation through `SpawnService`, and forwarding the generated cells to the view.
 `SpawnService.test.ts` verifies filling empty cells, preserving existing colors and
 indices, both palette boundaries, repeated calls, and an empty board.
-`BoardController` also verifies synchronous click processing, removal followed by
-movement (including an empty movement list), and ignoring invalid turns. `BoardModel` verifies that removal preserves
+`BoardController` also verifies synchronous click processing, refill followed by removal and
+combined falling (including an empty movement list), and ignoring invalid turns. `BoardModel` verifies that removal preserves
 cell indices and the original array.
 `BoardEngine` tests cover connected color groups, row boundaries, diagonals,
 empty cells, invalid indices, reading current model data without changing it,
@@ -47,8 +47,16 @@ entries from a larger previous group never remove extra cells.
 ignored during falling, enabling input uses the current cell index, and unbinding
 or disposal removes only the service's subscriptions.
 
-Refill has one `todo` specification: every empty cell must receive an integer color
-index in `[0, colorCount)`. Refill is not integrated into turn processing yet, so this is not a passing
-coverage check. A complete turn including refill is outside the current test scope.
+Refill is integrated in `BoardController`: successful turns fill all empty cells,
+then remove the old tile views and start one combined fall. Tests cover full-board
+refill, no existing moves, invalid turns, and reusing the spawn-index buffer.
+`SpawnService` returns the number of generated cells and optionally writes their
+indices in ascending order to a caller-owned buffer; only that prefix is valid.
 
-Rendering in `BoardView` requires the Cocos runtime and is not covered by this Node.js suite.
+`BoardView.test.mjs` runs the actual BoardView methods with Cocos stubs. Node's
+built-in type stripping removes TypeScript, and Inspector decorator lines are
+removed before loading the component. Tests cover simultaneous falls, per-column
+spawn stacks, pooled tiles, creating distinct new tiles when the pool is empty,
+final cell bindings, landing bounces, input locking,
+layout changes and destruction. This checks numeric animation behaviour, not
+actual rendering; visual validation still requires Cocos Preview.

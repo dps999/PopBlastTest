@@ -1,10 +1,10 @@
 import type { IInitializable } from "../core/GameFactory";
-import Tile from "../tiles/Tile";
-import { TilePool } from "../tiles/TilePool";
+import type Tile from "../tiles/Tile";
+import type { TilePool } from "../tiles/TilePool";
 import type { GameConfig } from "../core/GameConfig";
 import type { IBoardView } from "./IBoardView";
 import type { CellMove } from "./IBoardEngine";
-import { BoardInputService } from "./BoardInputService";
+import type { BoardInputService } from "./BoardInputService";
 
 export interface BoardViewDependencies {
     tilePool: TilePool;
@@ -52,6 +52,7 @@ export default class BoardView extends cc.Component implements IBoardView, IInit
     private fallElapsed: number[] = [];
     private fallDurations: number[] = [];
     private fallingCount: number = 0;
+    private columnSpawnCounts: number[] = [];
 
     public init(dependencies: BoardViewDependencies): void {
         this.tilePool = dependencies.tilePool;
@@ -64,6 +65,7 @@ export default class BoardView extends cc.Component implements IBoardView, IInit
         this.fallTargetY = new Array<number>(cellCount).fill(0);
         this.fallElapsed = new Array<number>(cellCount).fill(0);
         this.fallDurations = new Array<number>(cellCount).fill(0);
+        this.columnSpawnCounts = new Array<number>(this.config.boardColumns).fill(0);
         this.refreshLayout();
     }
 
@@ -95,31 +97,58 @@ export default class BoardView extends cc.Component implements IBoardView, IInit
         }
     }
 
-    public moveTiles(moves: CellMove[], count: number): void {
+    public fallTiles(
+        moves: CellMove[],
+        moveCount: number,
+        cells: number[],
+        spawnedIndices: number[],
+        spawnCount: number
+    ): void {
         if (this.fallingCount > 0) {
             this.refreshLayout();
         }
-        if (count === 0) {
+        if (moveCount + spawnCount === 0) {
             return;
         }
 
         this.inputService.setEnabled(false);
-        this.fallingCount = count;
-        for (let i = 0; i < count; i++) {
+        for (let i = 0; i < moveCount; i++) {
             const move = moves[i];
             const tile = this.tiles[move.from];
             this.tiles[move.from] = null;
             this.tiles[move.to] = tile;
             this.inputService.bind(tile.sprite.node, move.to);
-
-            const row = Math.floor(move.to / this.config.boardColumns);
-            const targetY = row * (this.tileSize.height + this.tileSpacing.height);
-            this.fallingTiles[i] = tile;
-            this.fallStartY[i] = tile.node.y;
-            this.fallTargetY[i] = targetY;
-            this.fallElapsed[i] = 0;
-            this.fallDurations[i] = Math.abs(targetY - tile.node.y) / this.fallSpeed;
+            this.startFalling(tile, move.to);
         }
+
+        this.columnSpawnCounts.fill(0);
+        const rowStep = this.tileSize.height + this.tileSpacing.height;
+        // SpawnService выдаёт индексы по возрастанию: новые клетки столбца идут снизу вверх.
+        for (let i = 0; i < spawnCount; i++) {
+            const index = spawnedIndices[i];
+            const column = index % this.config.boardColumns;
+            const spawnRow = this.config.boardRows + this.columnSpawnCounts[column];
+            this.columnSpawnCounts[column]++;
+
+            const tile = this.tilePool.get();
+            tile.setSprite(this.colorSprites[cells[index]]);
+            this.layoutTile(tile, index);
+            tile.node.y = spawnRow * rowStep;
+            this.tiles[index] = tile;
+            this.inputService.bind(tile.sprite.node, index);
+            this.startFalling(tile, index);
+        }
+    }
+
+    private startFalling(tile: Tile, index: number): void {
+        const slot = this.fallingCount++;
+        const row = Math.floor(index / this.config.boardColumns);
+        const targetY = row * (this.tileSize.height + this.tileSpacing.height);
+        this.fallingTiles[slot] = tile;
+        this.fallStartY[slot] = tile.node.y;
+        this.fallTargetY[slot] = targetY;
+        this.fallElapsed[slot] = 0;
+        this.fallDurations[slot] = Math.abs(targetY - tile.node.y) / this.fallSpeed;
     }
 
     private updateFalling(deltaTime: number): void {
@@ -209,13 +238,10 @@ export default class BoardView extends cc.Component implements IBoardView, IInit
     private layoutTile(tile: Tile, index: number): void {
         tile.setSize(this.tileSize);
         tile.node.parent = this.initialPoint;
-        tile.node.setPosition(this.getTilePosition(index));
-    }
 
-    private getTilePosition(index: number): cc.Vec3 {
         const column = index % this.config.boardColumns;
         const row = Math.floor(index / this.config.boardColumns);
-        return cc.v3(
+        tile.node.setPosition(
             column * (this.tileSize.width + this.tileSpacing.width),
             row * (this.tileSize.height + this.tileSpacing.height)
         );

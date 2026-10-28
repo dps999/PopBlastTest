@@ -1,3 +1,4 @@
 export interface ISpawnService {
-    spawn(cells: number[]): void;
+    /** Заполняет пустые клетки. Индексы возрастают; читать только префикс возвращённой длины. */
+    spawn(cells: number[], spawnedIndices?: number[]): number;
 }

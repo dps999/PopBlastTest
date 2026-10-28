@@ -21,7 +21,7 @@ describe("BoardController", () => {
         let clickedIndex = -1;
         const controller = new BoardController(
             { init(): void {}, getCells(): number[] { return []; }, removeCells(): void {}, moveCell(): void {} },
-            { initRender(): void {}, removeTiles(): void {}, moveTiles(): void {} },
+            { initRender(): void {}, removeTiles(): void {}, fallTiles(): void {} },
             {
                 processClick(index: number) {
                     clickedIndex = index;
@@ -61,20 +61,21 @@ describe("BoardController", () => {
                 assert.deepEqual(renderedCells, [2, 0, 1]);
             },
             removeTiles(): void {},
-            moveTiles(): void {}
+            fallTiles(): void {}
         };
         const controller = new BoardController(model, view, {
             processClick() {
                 return { valid: false, removedIndices: [], matchCount: 0, moves: [], moveCount: 0 };
             }
         }, {
-            spawn(spawnedCells: number[]): void {
+            spawn(spawnedCells: number[]): number {
                 calls[calls.length] = "spawn";
                 assert.strictEqual(spawnedCells, cells);
                 assert.deepEqual(spawnedCells, [-1, -1, -1]);
                 spawnedCells[0] = 2;
                 spawnedCells[1] = 0;
                 spawnedCells[2] = 1;
+                return 3;
             }
         });
 
@@ -93,7 +94,7 @@ describe("BoardController", () => {
                 renderedBoards[renderedBoards.length] = cells;
             },
             removeTiles(): void {},
-            moveTiles(): void {}
+            fallTiles(): void {}
         }, new BoardEngine(model, 3, 6), new SpawnService(1));
 
         controller.init();
@@ -118,7 +119,7 @@ describe("BoardController", () => {
                     assert.equal(count, matchCount);
                     calls.push("remove");
                 },
-                moveTiles(actualMoves: CellMove[], count: number): void {
+                fallTiles(actualMoves: CellMove[], count: number): void {
                     assert.strictEqual(actualMoves, moves);
                     assert.equal(count, moveCount);
                     calls.push("fall");
@@ -143,4 +144,76 @@ describe("BoardController", () => {
         assert.equal(calls.length, 4);
         assert.equal(moves.length, 2);
     });
+});
+
+it("refills a complete turn and reuses only the current spawn prefix", function completeTurn(): void {
+    const model = new BoardModel(4, 2);
+    const cells = model.getCells();
+    let renderCalls = 0;
+    let fallCalls = 0;
+    let previousIndices: number[] | null = null;
+    let expectedSpawns: number[] = [];
+    let spawnCalls = 0;
+    const service = new SpawnService(1);
+    const controller = new BoardController(model, {
+        initRender(): void { renderCalls++; },
+        removeTiles(): void {
+            assert.ok(model.getCells().every(function filled(color) { return color >= 0; }));
+        },
+        fallTiles(moves, moveCount, actualCells, indices, count): void {
+            assert.strictEqual(actualCells, model.getCells());
+            assert.deepEqual(indices.slice(0, count), expectedSpawns);
+            assert.equal(indices.length, 8);
+            if (previousIndices) {
+                assert.strictEqual(indices, previousIndices);
+            }
+            previousIndices = indices;
+            assert.equal(moveCount, fallCalls === 0 ? 2 : 0);
+            if (moveCount > 0) {
+                assert.deepEqual(moves.slice(0, moveCount), [{ from: 4, to: 0 }, { from: 6, to: 2 }]);
+            }
+            fallCalls++;
+        }
+    }, new BoardEngine(model, 2, 8), {
+        spawn(values, indices): number {
+            spawnCalls++;
+            return service.spawn(values, indices);
+        }
+    });
+    controller.init();
+    const current = model.getCells();
+    current.splice(0, 8, 1, 2, 1, 3, 4, 2, 3, 4);
+    expectedSpawns = [4, 6];
+    controller.onCellClicked(0);
+    assert.deepEqual(current, [4, 2, 3, 3, 0, 2, 0, 4]);
+
+    current[5] = 4;
+    expectedSpawns = [5, 7];
+    controller.onCellClicked(7);
+    assert.deepEqual(current, [4, 2, 3, 3, 0, 0, 0, 0]);
+
+    controller.onCellClicked(-1);
+    assert.equal(renderCalls, 1);
+    assert.equal(fallCalls, 2);
+    assert.equal(spawnCalls, 3);
+    assert.notStrictEqual(cells, current);
+});
+
+it("refills a completely cleared board", function refillWholeBoard(): void {
+    const model = new BoardModel(2, 2);
+    let falls = 0;
+    const controller = new BoardController(model, {
+        initRender(): void {},
+        removeTiles(_indices, count): void { assert.equal(count, 4); },
+        fallTiles(_moves, moveCount, cells, indices, count): void {
+            falls++;
+            assert.equal(moveCount, 0);
+            assert.equal(count, 4);
+            assert.deepEqual(indices, [0, 1, 2, 3]);
+            assert.deepEqual(cells, [0, 0, 0, 0]);
+        }
+    }, new BoardEngine(model, 2, 4), new SpawnService(1));
+    controller.init();
+    controller.onCellClicked(0);
+    assert.equal(falls, 1);
 });

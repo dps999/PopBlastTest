@@ -9,6 +9,7 @@ export class BoardController implements IBoardController {
     private readonly view: IBoardView;
     private readonly engine: IBoardEngine;
     private readonly spawnService: ISpawnService;
+    private spawnedIndices: number[] = [];
 
     constructor(model: IBoardModel, view: IBoardView, engine: IBoardEngine, spawnService: ISpawnService) {
         this.model = model;
@@ -20,6 +21,7 @@ export class BoardController implements IBoardController {
     public init(): void {
         this.model.init();
         const cells = this.model.getCells();
+        this.spawnedIndices = new Array<number>(cells.length).fill(0);
         this.spawnService.spawn(cells);
         this.view.initRender(cells);
     }
@@ -30,7 +32,9 @@ export class BoardController implements IBoardController {
             return;
         }
 
+        const cells = this.model.getCells();
+        const spawnCount = this.spawnService.spawn(cells, this.spawnedIndices);
         this.view.removeTiles(result.removedIndices, result.matchCount);
-        this.view.moveTiles(result.moves, result.moveCount);
+        this.view.fallTiles(result.moves, result.moveCount, cells, this.spawnedIndices, spawnCount);
     }
 }

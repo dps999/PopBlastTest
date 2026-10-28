@@ -1,7 +1,33 @@
 import assert from "node:assert/strict";
-import { EventEmitter } from "node:events";
 import { after, before, describe, it } from "node:test";
 import { BoardInputService } from "../assets/scripts/board/BoardInputService.ts";
+
+// Cocos подписывает обработчик с target и передаёт currentTarget в событии.
+class TouchNode {
+    private listeners: { handler: Function; target: unknown }[] = [];
+
+    public on(_type: string, handler: Function, target?: unknown): void {
+        this.listeners[this.listeners.length] = { handler, target };
+    }
+
+    public off(_type: string, handler: Function, target?: unknown): void {
+        this.listeners = this.listeners.filter(function keepOtherListener(listener) {
+            return listener.handler !== handler || listener.target !== target;
+        });
+    }
+
+    public emit(_type: string): void {
+        const event = { currentTarget: this };
+        for (let i = 0; i < this.listeners.length; i++) {
+            const listener = this.listeners[i];
+            listener.handler.call(listener.target, event);
+        }
+    }
+
+    public listenerCount(_type: string): number {
+        return this.listeners.length;
+    }
+}
 
 const originalCc = Object.getOwnPropertyDescriptor(globalThis, "cc");
 const touchEnd = "touchend";
@@ -29,7 +55,7 @@ describe("BoardInputService", () => {
     it("ignores clicks while disabled and uses the new cell index after enabling", () => {
         const clicks: number[] = [];
         const service = new BoardInputService({ onCellClicked: (index) => { clicks.push(index); } });
-        const node = new EventEmitter();
+        const node = new TouchNode();
         service.bind(node as unknown as cc.Node, 0);
         service.setEnabled(false);
 
@@ -49,7 +75,7 @@ describe("BoardInputService", () => {
     it("does not dispatch clicks after a tile is unbound", () => {
         const clicks: number[] = [];
         const service = new BoardInputService({ onCellClicked: (index) => { clicks.push(index); } });
-        const node = new EventEmitter();
+        const node = new TouchNode();
         service.bind(node as unknown as cc.Node, 0);
         node.emit(touchEnd);
 
@@ -63,8 +89,8 @@ describe("BoardInputService", () => {
     it("removes its subscriptions on disposal while preserving other listeners", () => {
         const clicks: number[] = [];
         const service = new BoardInputService({ onCellClicked: (index) => { clicks.push(index); } });
-        const first = new EventEmitter();
-        const second = new EventEmitter();
+        const first = new TouchNode();
+        const second = new TouchNode();
         let externalCalls = 0;
         first.on(touchEnd, () => { externalCalls++; });
         service.bind(first as unknown as cc.Node, 0);

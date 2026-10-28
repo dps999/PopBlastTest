@@ -2,7 +2,7 @@ import type { IBoardController } from "./IBoardController";
 
 export class BoardInputService {
     private readonly controller: IBoardController;
-    private readonly handlers: Map<cc.Node, () => void> = new Map();
+    private readonly indices: Map<cc.Node, number> = new Map();
     private enabled: boolean = true;
 
     constructor(controller: IBoardController) {
@@ -10,27 +10,15 @@ export class BoardInputService {
     }
 
     public bind(node: cc.Node, index: number): void {
-        this.unbind(node);
-        const handler = (): void => {
-            if (!this.enabled) {
-                return;
-            }
-            try {
-                this.controller.onCellClicked(index);
-            } catch (error) {
-                cc.error(error);
-            }
-        };
-        node.on(cc.Node.EventType.TOUCH_END, handler);
-        this.handlers.set(node, handler);
+        if (!this.indices.has(node)) {
+            node.on(cc.Node.EventType.TOUCH_END, this.onTouchEnd, this);
+        }
+        this.indices.set(node, index);
     }
 
     public unbind(node: cc.Node): void {
-        const handler = this.handlers.get(node);
-        if (handler) {
-            node.off(cc.Node.EventType.TOUCH_END, handler);
-            this.handlers.delete(node);
-        }
+        node.off(cc.Node.EventType.TOUCH_END, this.onTouchEnd, this);
+        this.indices.delete(node);
     }
 
     public setEnabled(enabled: boolean): void {
@@ -38,11 +26,28 @@ export class BoardInputService {
     }
 
     public dispose(): void {
-        this.handlers.forEach((handler, node) => {
-            if (cc.isValid(node)) {
-                node.off(cc.Node.EventType.TOUCH_END, handler);
-            }
-        });
-        this.handlers.clear();
+        this.indices.forEach(this.unbindOnDispose, this);
+        this.indices.clear();
+    }
+
+    private onTouchEnd(event: cc.Event.EventTouch): void {
+        if (!this.enabled) {
+            return;
+        }
+        const index = this.indices.get(event.currentTarget);
+        if (index === undefined) {
+            return;
+        }
+        try {
+            this.controller.onCellClicked(index);
+        } catch (error) {
+            cc.error(error);
+        }
+    }
+
+    private unbindOnDispose(_index: number, node: cc.Node): void {
+        if (cc.isValid(node)) {
+            node.off(cc.Node.EventType.TOUCH_END, this.onTouchEnd, this);
+        }
     }
 }

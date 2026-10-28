@@ -297,5 +297,3 @@ describe("BoardEngine removal with BoardModel", () => {
         assert.equal(matches.length, 6);
     });
 });
-
-it.todo("Refill fills all empty cells with integer color indices in [0, colorCount)");

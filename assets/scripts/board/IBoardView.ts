@@ -5,5 +5,6 @@ export interface IBoardView {
 
     removeTiles(indices: number[], count: number): void;
 
-    moveTiles(moves: CellMove[], count: number): void;
+    /** Синхронно потребляет префиксы буферов и запускает общее падение. */
+    fallTiles(moves: CellMove[], moveCount: number, cells: number[], spawnedIndices: number[], spawnCount: number): void;
 }

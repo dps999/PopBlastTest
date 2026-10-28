@@ -53,3 +53,20 @@ it("SpawnService accepts an empty board", function emptyBoard(): void {
 
     assert.deepEqual(cells, []);
 });
+
+it("SpawnService reports ascending spawned indices and reuses the buffer prefix", function spawnedPrefix(): void {
+    const cells = [-1, 3, -1, -1];
+    const indices = new Array<number>(cells.length).fill(99);
+    const service = new SpawnService(1);
+
+    assert.equal(service.spawn(cells, indices), 3);
+    assert.deepEqual(indices, [0, 2, 3, 99]);
+    assert.deepEqual(cells, [0, 3, 0, 0]);
+    assert.equal(service.spawn(cells, indices), 0);
+    assert.deepEqual(indices, [0, 2, 3, 99]);
+
+    cells[1] = -1;
+    assert.equal(service.spawn(cells, indices), 1);
+    assert.deepEqual(indices, [1, 2, 3, 99]);
+    assert.equal(service.spawn([]), 0);
+});
