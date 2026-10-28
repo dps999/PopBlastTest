@@ -1,8 +1,8 @@
-import type { IInitializable } from "../core/GameFactory";
 import type { GameConfig } from "../core/GameConfig";
 import type { IBoardView } from "./IBoardView";
 import type { CellMove } from "./IBoardEngine";
 import type BoardTileRenderer from "./BoardTileRenderer";
+import {IInitializable} from "../core/IInitializable";
 
 export interface BoardViewDependencies {
     tileRenderer: BoardTileRenderer;

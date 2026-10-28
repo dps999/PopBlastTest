@@ -1,23 +1,19 @@
-import { SuperTileFactory } from "../superTiles/SuperTileFactory";
-import { BoardController } from "../board/BoardController";
-import { BoardModel } from "../board/BoardModel";
+import {SuperTileFactory} from "../superTiles/SuperTileFactory";
+import {BoardController} from "../board/BoardController";
+import {BoardModel} from "../board/BoardModel";
 import BoardView from "../board/BoardView";
 import BoardTileRenderer from "../board/BoardTileRenderer";
-import { TilePool } from "../tiles/TilePool";
-import type { GameConfig } from "./GameConfig";
-import { BoardInputService } from "../board/BoardInputService";
-import { BoardEngine } from "../board/BoardEngine";
-import { SpawnService } from "../board/SpawnService";
-import { BoosterFactory } from "../boosters/BoosterFactory";
-import { BoosterModel } from "../boosters/BoosterModel";
-import { BoosterController } from "../boosters/BoosterController";
+import {TilePool} from "../tiles/TilePool";
+import type {GameConfig} from "./GameConfig";
+import {BoardInputService} from "../board/BoardInputService";
+import {BoardEngine} from "../board/BoardEngine";
+import {SpawnService} from "../board/SpawnService";
+import {BoosterFactory} from "../boosters/BoosterFactory";
+import {BoosterModel} from "../boosters/BoosterModel";
+import {BoosterController} from "../boosters/BoosterController";
 import type BoostersView from "../boosters/BoostersView";
-import { GameInputController } from "../gameplay/GameInputController";
-
-/** Компонент, которому фабрика передаёт зависимости после создания Cocos. */
-export interface IInitializable<TDependencies> {
-    init(dependencies: TDependencies): void;
-}
+import {GameInputController} from "../gameplay/GameInputController";
+import {IInitializable} from "./IInitializable";
 
 /** Единая точка создания игровых компонентов с явным внедрением зависимостей. */
 export class GameFactory {
