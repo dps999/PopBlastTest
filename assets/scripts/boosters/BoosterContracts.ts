@@ -1,3 +1,4 @@
+import type { IBoardInputStateListener } from "../board/IBoardController";
 import type { TurnResult } from "../board/IBoardEngine";
 
 /** Стратегии используют только операции поля и отделены от рендеринга. */
@@ -37,7 +38,7 @@ export interface IBoosterButtonListener {
     selectBooster(index: number): void;
 }
 
-export interface IBoosterInputController {
+export interface IBoosterInputController extends IBoardInputStateListener {
     init(): void;
     isActive(): boolean;
     processCell(index: number): TurnResult | null;

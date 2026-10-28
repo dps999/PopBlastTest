@@ -1,19 +1,17 @@
 export interface IGameState {
     getMovesLeft(): number;
     getScore(): number;
+    getTargetScore(): number;
 }
 
 export interface IGameModel {
-    spendMove(): void;
-    addScoreForRemovedTiles(count: number): number;
+    applyTurn(removedCount: number, spendsMove: boolean): void;
+    isWon(): boolean;
+    isLost(): boolean;
     getState(): IGameState;
 }
 
 export interface IGameView {
     render(state: IGameState): void;
-}
-
-/** Получает только данные завершённого действия, без буферов поля. */
-export interface IGameTurnListener {
-    onTurnResolved(removedCount: number): void;
+    showResult(won: boolean, state: IGameState): void;
 }

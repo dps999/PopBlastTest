@@ -21,11 +21,9 @@ export default class GameOverPopupView extends cc.Component {
     @property([cc.Component.EventHandler])
     private exitEvents: cc.Component.EventHandler[] = [];
 
-    public show(score: number, targetScore: number, moves: number, teleportCount: number, bombCount: number): void {
+    public show(score: number, targetScore: number, moves: number): void {
         this.scoreLabel.string = score.toString() + "/" + targetScore.toString();
         this.movesLabel.string = moves.toString();
-        this.teleportQuantityLabel.string = teleportCount.toString();
-        this.bombQuantityLabel.string = bombCount.toString();
         this.node.active = true;
     }
 

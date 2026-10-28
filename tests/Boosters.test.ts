@@ -8,13 +8,15 @@ import { BoosterController } from "../assets/scripts/boosters/BoosterController.
 import { BoosterModel } from "../assets/scripts/boosters/BoosterModel.ts";
 import { ThresholdCreationStrategy } from "../assets/scripts/superTiles/SuperTileStrategies.ts";
 import { loadGameModule, RowEffectStrategy, ColumnEffectStrategy } from "./helpers/CocosComponents.mjs";
-import { GameInputController } from "../assets/scripts/gameplay/GameInputController.ts";
+const { GameController } = await import(await loadGameModule("gameplay/GameController.ts"));
+const { GameSession } = await import(await loadGameModule("gameplay/GameSession.ts"));
 import type { BoosterContext, BoosterDefinition, IBoosterEffectStrategy } from "../assets/scripts/boosters/BoosterContracts.ts";
 import type { TurnResult } from "../assets/scripts/board/IBoardEngine.ts";
 
 const { default: BombBoosterStrategy } = await import(await loadGameModule("boosters/BombBoosterStrategy.ts"));
 const { default: TeleportBoosterStrategy } = await import(await loadGameModule("boosters/TeleportBoosterStrategy.ts"));
-const turnListener = { onTurnResolved(): void {} };
+import { GameModel } from "../assets/scripts/gameplay/GameModel.ts";
+const gameView = { render(): void {}, showResult(): void {} };
 
 function bomb(radius: number = 1) {
     const effect = new BombBoosterStrategy();
@@ -66,7 +68,7 @@ function fixture(definitions?: BoosterDefinition[]) {
         }
     };
     const boardController = new BoardController(model, view, engine, spawn);
-    const board = new GameInputController(boardController, boosters, turnListener);
+    const board = new GameController(boardController, boosters, new GameModel(20, 10, 100000), new GameSession(), gameView);
     board.init();
     return { model, engine, stock, view, buttons, boosters, board, spawn };
 }
@@ -176,13 +178,13 @@ it("stock reaches zero, disables the button and resets on level initialization",
     for (let i = 0; i < 3; i++) { boosters.selectBooster(1); await board.onCellClicked(0); await board.onCellClicked(3); }
     assert.equal(stock.getCount(1), 0); assert.equal(buttons[1].enabled, false);
     boosters.selectBooster(1); assert.equal(boosters.isActive(), false);
-    board.init(); assert.equal(stock.getCount(1), 3); assert.equal(buttons[1].enabled, true);
+    boosters.init(); assert.equal(stock.getCount(1), 3); assert.equal(buttons[1].enabled, true);
     assert.throws(function negative() { fixture([{ effect: new TeleportBoosterStrategy(), initialCount: -1, icon: null }]); });
 });
 
 it("shared input state blocks booster activation and targets during falling", async function inputLock(): Promise<void> {
     const { boosters, board, buttons, stock } = fixture();
-    const input = new BoardInputService(board); input.setStateListener(boosters);
+    const input = new BoardInputService(board); input.setStateListener(board);
     boosters.selectBooster(1); await board.onCellClicked(0);
     input.setEnabled(false); assert.equal(input.isEnabled(), false);
     assert.equal(buttons[0].enabled, false); assert.equal(buttons[1].enabled, false);

@@ -3,16 +3,18 @@
 Tests use Node.js's built-in test runner and TypeScript type stripping; there are no third-party test dependencies.
 
 `Scoring.test.ts` runs the actual board engine, boosters, input controller, game
-model, presenter and GameView with a label stub. It covers configurable
+model, session and GameView with a label stub. It covers configurable
 points per removed cell, cumulative scoring, super tile creation and overlapping
 chains, bomb effects, invalid clicks, teleport selection/cancellation/swaps, and
-the scene's HUD reference. Score changes reach the HUD after awaiting the complete
-turn pipeline. Further clicks are ignored until it finishes, so the engine cannot
+the scene's HUD reference. Accepted actions update GameModel immediately, since BoardModel is already changed.
+Score and moves reach the HUD after awaiting the complete turn pipeline. Further clicks are ignored until it finishes, so the engine cannot
 overwrite its reusable TurnResult during an awaited animation.
 Run these checks independently with `node --test tests/Scoring.test.ts tests/GameModel.test.mjs`.
-`GameModel.test.mjs` also checks tile-price validation, reward calculation and
-accumulation, and zero rewards when no cells are removed. GameModel owns the
-scoring rule; GamePresenter updates the HUD only after a positive reward.
+`GameModel.test.mjs` also checks numeric configuration, scoring, free booster actions,
+win priority on the last move and immutable terminal results. GameModel owns the
+level rules; GameController coordinates it with the existing GameSession FSM.
+Scoring integration also covers win/loss popups, terminal input locking, cancelled
+animation waits, teardown during a turn, and errors without rollback.
 
 `Boosters.test.ts` covers bomb squares and edge clipping, chained super tiles,
 atomic validation and deduplication of external removal, teleporting distant and
@@ -54,7 +56,7 @@ color generation through `SpawnService`, and forwarding the generated cells to t
 indices, both palette boundaries, repeated calls, and an empty board.
 `BoardController` tests call `processClick` and then await `applyTurnResult`, matching the
 separate calculation and rendering phases. Booster input and level reset run through
-`GameInputController`. These checks verify synchronous turn calculation, removal
+`GameController`. These checks verify synchronous turn calculation, removal
 followed by awaited animations, refill and combined falling (including an empty
 movement list), and ignoring invalid turns. `BoardModel` verifies that removal preserves
 cell indices and the original array.

@@ -3,6 +3,7 @@ import { GameConfig } from "./GameConfig";
 import { GameFactory } from "./GameFactory";
 import BoostersView from "../boosters/BoostersView";
 import GameView from "../gameplay/GameView";
+import { GameSession } from "../gameplay/GameSession";
 
 const { ccclass, property } = cc._decorator;
 
@@ -37,8 +38,14 @@ export default class GameBootstrap extends cc.Component {
     @property(GameView)
     private gameView: GameView = null;
 
+    private readonly session: GameSession = new GameSession();
+
+    protected onDestroy(): void {
+        this.session.stop();
+    }
+
     protected start(): void {
         GameFactory.createBoard(this.boardView, this.tilePrefab, this.tileRemovalParticlePrefab, this.colorSprites, this.config,
-            this.superTilePrefabs, this.boosterPrefabs, this.boostersView, this.gameView);
+            this.superTilePrefabs, this.boosterPrefabs, this.boostersView, this.gameView, this.session);
     }
 }
