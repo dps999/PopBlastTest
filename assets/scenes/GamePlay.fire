@@ -1517,6 +1517,22 @@
   },
   {
     "__type__": "GameConfig",
+    "colorCount": 5,
+    "superTileRules": [
+      {
+        "__id__": 36
+      },
+      {
+        "__id__": 37
+      },
+      {
+        "__id__": 38
+      },
+      {
+        "__id__": 39
+      }
+    ],
+    "superTileRadius": 1,
     "boardRows": 9,
     "boardColumns": 9
   },
