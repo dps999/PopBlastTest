@@ -125,3 +125,9 @@ configure its threshold and sprite, and add it to GameBootstrap.superTilePrefabs
 The highest eligible threshold wins; equal thresholds are selected uniformly at random.
 The scene thresholds are 5/5/7/13. Tests cover reference identity, chains, effect areas,
 no strategy prefab instantiation or extra pools, and common-pool sprite reset after reuse.
+
+`GameSession.test.mjs` checks preparation, legal turn transitions, terminal states,
+restart, pause without repeated state entry, completion during pause, session
+isolation, and transitions requested from lifecycle notifications. It uses the
+existing module loader and Node.js test runner without additional dependencies.
+Run it with `node --test tests/GameSession.test.mjs`.

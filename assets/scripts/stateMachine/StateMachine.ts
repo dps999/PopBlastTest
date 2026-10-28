@@ -1,12 +1,12 @@
 import type { IState } from "./IState";
 
 /** Работает с готовыми экземплярами состояний и переиспользует их при переходах. */
-export class StateMachine {
-    private currentState: IState | null = null;
-    private pendingState: IState | null | undefined = undefined;
+export class StateMachine<TState extends IState = IState> {
+    private currentState: TState | null = null;
+    private pendingState: TState | null | undefined = undefined;
     private transitioning: boolean = false;
 
-    public getCurrentState(): IState | null {
+    public getCurrentState(): TState | null {
         return this.currentState;
     }
 
@@ -15,7 +15,7 @@ export class StateMachine {
      * Запрос из enter/exit выполняется после текущего перехода;
      * при нескольких таких запросах сохраняется последний.
      */
-    public changeState(state: IState | null): void {
+    public changeState(state: TState | null): void {
         this.pendingState = state;
         if (this.transitioning) {
             return;
