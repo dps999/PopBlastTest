@@ -9,7 +9,6 @@ import { BoosterModel } from "../assets/scripts/boosters/BoosterModel.ts";
 import { GameInputController } from "../assets/scripts/gameplay/GameInputController.ts";
 import { GameModel } from "../assets/scripts/gameplay/GameModel.ts";
 import { GamePresenter } from "../assets/scripts/gameplay/GamePresenter.ts";
-import { ScoreCalculator } from "../assets/scripts/gameplay/ScoreCalculator.ts";
 import { ThresholdCreationStrategy } from "../assets/scripts/superTiles/SuperTileStrategies.ts";
 import { loadGameModule, RowEffectStrategy, ColumnEffectStrategy } from "./helpers/CocosComponents.mjs";
 
@@ -75,7 +74,7 @@ class SpawnStub {
 
 class ScoringFixture {
     public readonly boardModel: BoardModel = new BoardModel(5, 5);
-    public readonly gameModel: GameModel = new GameModel(3);
+    public readonly gameModel: GameModel;
     public readonly label: ScoreLabel = new ScoreLabel();
     public readonly boardView: BoardViewStub = new BoardViewStub(this.label);
     public readonly gameView = new GameView();
@@ -84,6 +83,7 @@ class ScoringFixture {
     public readonly input: GameInputController;
 
     constructor(pointsPerTile: number = 10) {
+        this.gameModel = new GameModel(3, pointsPerTile);
         const row = new RowEffectStrategy();
         row.minimumGroupSize = 5;
         const column = new ColumnEffectStrategy();
@@ -98,7 +98,7 @@ class ScoringFixture {
         this.boosters = new BoosterController(definitions, new BoosterModel(definitions),
             this.boardModel, engine, this.boardView, this.boardView, 5, 25);
         Reflect.set(this.gameView, "scoreLabel", this.label);
-        this.presenter = new GamePresenter(this.gameModel, this.gameView, new ScoreCalculator(pointsPerTile));
+        this.presenter = new GamePresenter(this.gameModel, this.gameView);
         this.input = new GameInputController(board, this.boosters, this.presenter);
         this.presenter.start();
         this.input.init();
@@ -190,15 +190,6 @@ it("does not award points for teleport selection, cancellation or the completed 
     assert.equal(cells[24], 0);
     assert.equal(fixture.gameModel.getScore(), 0);
     assert.equal(fixture.label.writes, 1);
-});
-
-it("validates the configured tile price and awards zero for no removal", function scoreConfiguration() {
-    assert.equal(new ScoreCalculator(10).calculate(0), 0);
-    assert.throws(function zeroPrice() { new ScoreCalculator(0); });
-    assert.throws(function negativePrice() { new ScoreCalculator(-1); });
-    assert.throws(function fractionalPrice() { new ScoreCalculator(1.5); });
-    assert.throws(function infinitePrice() { new ScoreCalculator(Infinity); });
-    assert.throws(function nanPrice() { new ScoreCalculator(NaN); });
 });
 
 it("links the bootstrap to the existing score view and configures ten points per tile", function sceneWiring() {

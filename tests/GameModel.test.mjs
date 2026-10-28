@@ -28,12 +28,28 @@ describe("GameModel", () => {
         assert.equal(model.getState().getMovesLeft(), 0);
     });
 
-    it("adds score points cumulatively", () => {
-        const model = new GameModel(5);
+    it("calculates and accumulates rewards using the configured tile price", function rewards() {
+        const model = new GameModel(5, 25);
 
-        model.addScore(100);
-        model.addScore(25);
+        assert.equal(model.addScoreForRemovedTiles(4), 100);
+        assert.equal(model.addScoreForRemovedTiles(1), 25);
 
         assert.equal(model.getState().getScore(), 125);
+    });
+
+    it("preserves score and returns zero when no tiles are removed", function noRemoval() {
+        const model = new GameModel();
+        assert.equal(model.addScoreForRemovedTiles(2), 20);
+        assert.equal(model.addScoreForRemovedTiles(0), 0);
+        assert.equal(model.addScoreForRemovedTiles(-1), 0);
+        assert.equal(model.getScore(), 20);
+    });
+
+    it("validates the configured tile price", function scoreConfiguration() {
+        assert.throws(function zeroPrice() { new GameModel(0, 0); });
+        assert.throws(function negativePrice() { new GameModel(0, -1); });
+        assert.throws(function fractionalPrice() { new GameModel(0, 1.5); });
+        assert.throws(function infinitePrice() { new GameModel(0, Infinity); });
+        assert.throws(function nanPrice() { new GameModel(0, NaN); });
     });
 });

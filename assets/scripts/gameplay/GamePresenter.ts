@@ -1,14 +1,12 @@
-import type { IGameModel, IGameTurnListener, IGameView, IScoreCalculator } from "./GameContracts";
+import type { IGameModel, IGameTurnListener, IGameView } from "./GameContracts";
 
 export class GamePresenter implements IGameTurnListener {
     private readonly model: IGameModel;
     private readonly view: IGameView;
-    private readonly scoreCalculator: IScoreCalculator;
 
-    constructor(model: IGameModel, view: IGameView, scoreCalculator: IScoreCalculator) {
+    constructor(model: IGameModel, view: IGameView) {
         this.model = model;
         this.view = view;
-        this.scoreCalculator = scoreCalculator;
     }
 
     public start(): void {
@@ -16,11 +14,10 @@ export class GamePresenter implements IGameTurnListener {
     }
 
     public onTurnResolved(removedCount: number): void {
-        const points = this.scoreCalculator.calculate(removedCount);
+        const points = this.model.addScoreForRemovedTiles(removedCount);
         if (points <= 0) {
             return;
         }
-        this.model.addScore(points);
         this.view.render(this.model.getState());
     }
 }

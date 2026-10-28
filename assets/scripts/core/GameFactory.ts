@@ -15,7 +15,6 @@ import type BoostersView from "../boosters/BoostersView";
 import {GameInputController} from "../gameplay/GameInputController";
 import {GameModel} from "../gameplay/GameModel";
 import {GamePresenter} from "../gameplay/GamePresenter";
-import {ScoreCalculator} from "../gameplay/ScoreCalculator";
 import type {IGameView} from "../gameplay/GameContracts";
 
 /** Единая точка создания игровых компонентов с явным внедрением зависимостей. */
@@ -43,8 +42,7 @@ export class GameFactory {
         if (colorSprites.length < config.colorCount) {
             throw new Error("Not enough color sprites for the configured level color count.");
         }
-        const scoreCalculator = new ScoreCalculator(config.pointsPerTile);
-        const presenter = new GamePresenter(new GameModel(), gameView, scoreCalculator);
+        const presenter = new GamePresenter(new GameModel(0, config.pointsPerTile), gameView);
         const superTiles = new SuperTileFactory(superTilePrefabs, config.colorCount);
         const model = new BoardModel(config.boardRows, config.boardColumns);
         const tilePool = new TilePool(tilePrefab);

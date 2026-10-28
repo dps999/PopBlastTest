@@ -5,16 +5,12 @@ export interface IGameState {
 
 export interface IGameModel {
     spendMove(): void;
-    addScore(points: number): void;
+    addScoreForRemovedTiles(count: number): number;
     getState(): IGameState;
 }
 
 export interface IGameView {
     render(state: IGameState): void;
-}
-
-export interface IScoreCalculator {
-    calculate(removedCount: number): number;
 }
 
 /** Получает только данные завершённого действия, без буферов поля. */
