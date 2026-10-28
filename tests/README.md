@@ -80,8 +80,9 @@ Removal consumes only the first `matchCount` entries; tests verify that stale
 entries from a larger previous group never remove extra cells.
 
 `BoardInputService.test.ts` uses a small Cocos event stub to verify that clicks are
-ignored during falling, enabling input uses the current cell index, and unbinding
-or disposal removes only the service's subscriptions.
+ignored during falling and enabling input uses the current cell index. Deactivated
+tiles ignore clicks and keep one subscription across pooling and cell changes;
+only disposal removes the service's subscriptions, preserving external listeners.
 
 Refill is integrated in `BoardController`: successful turns wait for removal/merge
 and particles, fill all empty cells, then start one combined fall. Tests cover full-board

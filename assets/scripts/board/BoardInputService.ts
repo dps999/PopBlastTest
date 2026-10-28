@@ -17,9 +17,10 @@ export class BoardInputService {
         this.indices.set(node, index);
     }
 
-    public unbind(node: cc.Node): void {
-        node.off(cc.Node.EventType.TOUCH_END, this.onTouchEnd, this);
-        this.indices.delete(node);
+    public deactivate(node: cc.Node): void {
+        if (this.indices.has(node)) {
+            this.indices.set(node, -1);
+        }
     }
 
     public setEnabled(enabled: boolean): void {
@@ -54,7 +55,7 @@ export class BoardInputService {
             return;
         }
         const index = this.indices.get(event.currentTarget);
-        if (index === undefined) {
+        if (index === undefined || index < 0) {
             return;
         }
         try {

@@ -94,18 +94,59 @@ describe("BoardInputService", () => {
         service.dispose();
     });
 
-    it("does not dispatch clicks after a tile is unbound", () => {
+    it("ignores a deactivated tile while keeping its subscription until disposal", () => {
         const clicks: number[] = [];
         const service = new BoardInputService({ onCellClicked: (index) => { clicks.push(index); } });
         const node = new TouchNode();
         service.bind(node as unknown as cc.Node, 0);
         node.emit(touchEnd);
 
-        service.unbind(node as unknown as cc.Node);
+        service.deactivate(node as unknown as cc.Node);
         node.emit(touchEnd);
 
         assert.deepEqual(clicks, [0]);
+        assert.equal(node.listenerCount(touchEnd), 1);
+        service.dispose();
         assert.equal(node.listenerCount(touchEnd), 0);
+    });
+
+    it("reuses one subscription across repeated pooling and cell changes", function pooledSubscription(context) {
+        const handler = {
+            clicks: [] as number[],
+            onCellClicked(index: number): void {
+                this.clicks[this.clicks.length] = index;
+            }
+        };
+        const service = new BoardInputService(handler);
+        const node = new TouchNode();
+        const on = context.mock.method(node, "on");
+        const off = context.mock.method(node, "off");
+        const cocosNode = node as unknown as cc.Node;
+
+        service.bind(cocosNode, 0);
+        node.emit(touchEnd);
+        service.deactivate(cocosNode);
+        node.emit(touchEnd);
+        service.bind(cocosNode, 5);
+        node.emit(touchEnd);
+        service.bind(cocosNode, 2);
+        node.emit(touchEnd);
+        service.deactivate(cocosNode);
+        node.emit(touchEnd);
+        service.bind(cocosNode, 3);
+        node.emit(touchEnd);
+
+        assert.deepEqual(handler.clicks, [0, 5, 2, 3]);
+        assert.equal(on.mock.callCount(), 1);
+        assert.equal(off.mock.callCount(), 0);
+        assert.equal(node.listenerCount(touchEnd), 1);
+
+        service.deactivate(cocosNode);
+        service.dispose();
+        node.emit(touchEnd);
+        assert.equal(off.mock.callCount(), 1);
+        assert.equal(node.listenerCount(touchEnd), 0);
+        assert.deepEqual(handler.clicks, [0, 5, 2, 3]);
     });
 
     it("removes its subscriptions on disposal while preserving other listeners", () => {

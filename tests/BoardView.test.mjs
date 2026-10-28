@@ -66,7 +66,7 @@ function createView(rows, columns, cells, initialize = true) {
         indices: new Map(),
         setEnabled(value) { this.enabled = value; },
         bind(node, index) { this.indices.set(node, index); },
-        unbind(node) { this.indices.delete(node); },
+        deactivate(node) { if (this.indices.has(node)) { this.indices.set(node, -1); } },
         dispose() { this.indices.clear(); }
     };
     // Задаём точную геометрию теста, сохраняя реальные init/refreshLayout и анимацию.
@@ -123,6 +123,7 @@ it("falls existing and pooled new tiles together and waits for the final landing
     const fallingBuffer = view.tileRenderer.fallingStates;
     const originalStates = new Set(fallingBuffer);
     view.removeTiles([0], 1);
+    assert.equal(input.indices.get(removed.node), -1);
     stepView(view, 0.36);
     assert.equal(released.length, 1);
     view.fallTiles([{ from: 2, to: 0 }, { from: 4, to: 2 }], 2, [1, 0, 2, 2, 0, 1], [4, 999], 1);
@@ -348,7 +349,7 @@ it("delays particles, keeps shrinking tiles out of the pool and locks input unti
     renderer.fallSpeed = 1000;
     view.removeTiles([0], 1);
     assert.equal(renderer.tiles[0], null);
-    assert.equal(input.indices.has(removed.node), false);
+    assert.equal(input.indices.get(removed.node), -1);
     assert.equal(input.enabled, false);
     assert.equal(released.length, 0);
     assert.equal(renderer.activeParticleCount, 0);

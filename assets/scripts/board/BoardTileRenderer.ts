@@ -234,7 +234,7 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
         if (!tile) {
             return;
         }
-        this.inputService.unbind(tile.sprite.node);
+        this.inputService.deactivate(tile.sprite.node);
         this.tiles[index] = null;
         const state = this.removalStates[this.removalCount++];
         state.tile = tile;
