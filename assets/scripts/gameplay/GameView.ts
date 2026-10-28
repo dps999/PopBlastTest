@@ -1,13 +1,15 @@
-import {GameState, IGameView} from "./GamePresenter";
+import type { IGameState, IGameView } from "./GameContracts";
 
-const {ccclass, property} = cc._decorator;
+const { ccclass, property } = cc._decorator;
 
 @ccclass
 export default class GameView extends cc.Component implements IGameView {
     @property(cc.Label)
     private scoreLabel: cc.Label = null;
-    render(state: GameState): void {
+    public render(state: IGameState): void {
+        if (!this.scoreLabel) {
+            throw new Error("GameView requires a score Label reference.");
+        }
         this.scoreLabel.string = state.getScore().toString();
     }
-
 }

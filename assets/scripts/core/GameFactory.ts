@@ -14,6 +14,10 @@ import {BoosterController} from "../boosters/BoosterController";
 import type BoostersView from "../boosters/BoostersView";
 import {GameInputController} from "../gameplay/GameInputController";
 import {IInitializable} from "./IInitializable";
+import {GameModel} from "../gameplay/GameModel";
+import {GamePresenter} from "../gameplay/GamePresenter";
+import {ScoreCalculator} from "../gameplay/ScoreCalculator";
+import type {IGameView} from "../gameplay/GameContracts";
 
 /** Единая точка создания игровых компонентов с явным внедрением зависимостей. */
 export class GameFactory {
@@ -24,10 +28,14 @@ export class GameFactory {
         config: GameConfig,
         superTilePrefabs: cc.Prefab[],
         boosterPrefabs: cc.Prefab[],
-        boostersView: BoostersView
+        boostersView: BoostersView,
+        gameView: IGameView
     ): BoardController {
         if (!boostersView) {
             throw new Error("GameBootstrap requires a BoostersView reference.");
+        }
+        if (!gameView) {
+            throw new Error("GameBootstrap requires a GameView reference.");
         }
         if (config.colorCount < 2 || config.colorCount > 5 || config.colorCount % 1 !== 0) {
             throw new Error("Level color count must be an integer from 2 to 5.");
@@ -35,6 +43,8 @@ export class GameFactory {
         if (colorSprites.length < config.colorCount) {
             throw new Error("Not enough color sprites for the configured level color count.");
         }
+        const scoreCalculator = new ScoreCalculator(config.pointsPerTile);
+        const presenter = new GamePresenter(new GameModel(), gameView, scoreCalculator);
         const superTiles = new SuperTileFactory(superTilePrefabs, config.colorCount);
         const model = new BoardModel(config.boardRows, config.boardColumns);
         const tilePool = new TilePool(tilePrefab);
@@ -45,7 +55,7 @@ export class GameFactory {
         const boosters = new BoosterController(definitions, new BoosterModel(definitions), model, engine,
             view, boostersView, config.boardColumns, capacity);
         const boardController = new BoardController(model, view, engine, spawnService);
-        const inputController = new GameInputController(boardController, boosters);
+        const inputController = new GameInputController(boardController, boosters, presenter);
         const inputService = new BoardInputService(inputController);
         const tileRenderer = view.getComponent(BoardTileRenderer) || view.addComponent(BoardTileRenderer);
         tileRenderer.init({
@@ -57,6 +67,7 @@ export class GameFactory {
         });
         view.init({ tileRenderer, colorSprites, config });
         boostersView.init(boosters, definitions);
+        presenter.start();
         inputController.init();
         inputService.setStateListener(boosters);
         return boardController;

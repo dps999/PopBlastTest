@@ -2,6 +2,14 @@
 
 Tests use Node.js's built-in test runner and TypeScript type stripping; there are no third-party test dependencies.
 
+`Scoring.test.ts` runs the actual board engine, boosters, input controller, score
+calculator, model, presenter and GameView with a label stub. It covers configurable
+points per removed cell, cumulative scoring, super tile creation and overlapping
+chains, bomb effects, invalid clicks, teleport selection/cancellation/swaps, and
+the scene's HUD reference. Score changes reach the HUD synchronously before tile
+removal is rendered; no animation callback or retained TurnResult is involved.
+Run these checks independently with `node --test tests/Scoring.test.ts tests/GameModel.test.mjs`.
+
 `Boosters.test.ts` covers bomb squares and edge clipping, chained super tiles,
 atomic validation and deduplication of external removal, teleporting distant and
 special tiles, cancelling and switching selection, stock consumption and reset,

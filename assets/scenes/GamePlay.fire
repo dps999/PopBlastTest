@@ -1565,6 +1565,9 @@
     "boostersView": {
       "__id__": 56
     },
+    "gameView": {
+      "__id__": 20
+    },
     "boosterPrefabs": [
       {
         "__uuid__": "6793affc-23b4-4d0a-8b41-112bf5772868"
@@ -1578,7 +1581,8 @@
     "__type__": "GameConfig",
     "boardRows": 9,
     "boardColumns": 9,
-    "colorCount": 4
+    "colorCount": 4,
+    "pointsPerTile": 10
   },
   {
     "__type__": "cc.Node",

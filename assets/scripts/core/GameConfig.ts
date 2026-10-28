@@ -9,4 +9,7 @@ export class GameConfig {
     public boardColumns: number = 8;
     @property({ type: cc.Integer, min: 2, max: 5, tooltip: "Количество цветов уровня: используются первые спрайты из colorSprites." })
     public colorCount: number = 5;
+
+    @property({ type: cc.Integer, min: 1, tooltip: "Очки за одну удалённую клетку." })
+    public pointsPerTile: number = 10;
 }
