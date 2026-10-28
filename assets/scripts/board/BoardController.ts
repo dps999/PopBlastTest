@@ -1,25 +1,21 @@
 import type { IBoardView } from "./IBoardView";
 import type { IBoardModel } from "./IBoardModel";
 import type { IBoardController } from "./IBoardController";
-import type { IBoardEngine } from "./IBoardEngine";
+import type { IBoardEngine, TurnResult } from "./IBoardEngine";
 import type { ISpawnService } from "./ISpawnService";
-import type { IBoosterInputController } from "../boosters/BoosterContracts";
 
 export class BoardController implements IBoardController {
     private readonly model: IBoardModel;
     private readonly view: IBoardView;
     private readonly engine: IBoardEngine;
     private readonly spawnService: ISpawnService;
-    private readonly boosters: IBoosterInputController;
     private spawnedIndices: number[] = [];
 
-    constructor(model: IBoardModel, view: IBoardView, engine: IBoardEngine, spawnService: ISpawnService,
-        boosters?: IBoosterInputController) {
+    constructor(model: IBoardModel, view: IBoardView, engine: IBoardEngine, spawnService: ISpawnService) {
         this.model = model;
         this.view = view;
         this.engine = engine;
         this.spawnService = spawnService;
-        this.boosters = boosters;
     }
 
     public init(): void {
@@ -28,14 +24,13 @@ export class BoardController implements IBoardController {
         this.spawnedIndices = new Array<number>(cells.length).fill(0);
         this.spawnService.spawn(cells);
         this.view.initRender(cells);
-        if (this.boosters) {
-            this.boosters.init();
-        }
     }
 
-    public onCellClicked(index: number): void {
-        const result = this.boosters && this.boosters.isActive()
-            ? this.boosters.processCell(index) : this.engine.processClick(index);
+    public processClick(index: number): TurnResult {
+        return this.engine.processClick(index);
+    }
+
+    public applyTurnResult(result: TurnResult | null): void {
         if (!result || !result.valid) {
             return;
         }

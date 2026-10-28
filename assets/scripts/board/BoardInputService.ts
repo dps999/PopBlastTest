@@ -1,16 +1,12 @@
-import type { IBoardController } from "./IBoardController";
-
-export interface IBoardInputStateListener {
-    onInputEnabledChanged(enabled: boolean): void;
-}
+import type { IBoardInputHandler, IBoardInputStateListener } from "./IBoardController";
 
 export class BoardInputService {
-    private readonly controller: IBoardController;
+    private readonly controller: IBoardInputHandler;
     private readonly indices: Map<cc.Node, number> = new Map();
     private enabled: boolean = true;
     private stateListener: IBoardInputStateListener = null;
 
-    constructor(controller: IBoardController) {
+    constructor(controller: IBoardInputHandler) {
         this.controller = controller;
     }
 

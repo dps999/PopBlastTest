@@ -1,5 +1,5 @@
 import type { TurnResult } from "../board/IBoardEngine";
-import type { IBoardInputStateListener } from "../board/BoardInputService";
+import type { IBoardInputStateListener } from "../board/IBoardController";
 import type { IBoardModel } from "../board/IBoardModel";
 import type { BoosterModel } from "./BoosterModel";
 import type { BoosterContext, BoosterDefinition, IBoosterBoardActions, IBoosterButtonListener, IBoosterInputController, IBoosterSelectionView, IBoostersView } from "./BoosterContracts";
