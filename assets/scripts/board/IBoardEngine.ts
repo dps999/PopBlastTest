@@ -13,7 +13,7 @@ export interface TurnResult {
     removedCount: number;
     /** Индекс до гравитации, -1 при отсутствии преобразования. */
     transformedIndex: number;
-    transformedKind: number;
+    transformedValue: number;
     /** Фиксированный массив; читать первые moveCount записей до следующего processClick. */
     moves: CellMove[];
     moveCount: number;

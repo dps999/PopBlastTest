@@ -1,109 +1,50 @@
-export const TileKind = { Normal: 0, Row: 1, Column: 2, Radius: 3, Board: 4 } as const;
-export type TileKind = number;
-
-export interface SuperTileRule {
-    kind: TileKind;
-    minimumGroupSize: number;
-}
-
 export interface EffectContext {
     columns: number;
     capacity: number;
 }
 
+/** Реализуется компонентом стратегии на корне префаба. */
 export interface ISuperTileEffectStrategy {
+    readonly minimumGroupSize: number;
+    readonly spriteFrame: cc.SpriteFrame;
     collectTargets(originIndex: number, context: EffectContext, targets: number[]): number;
 }
 
 export interface ISuperTileCreationStrategy {
-    selectKind(groupSize: number): TileKind;
+    readonly colorCount: number;
+    selectTile(groupSize: number): number;
+    getStrategy(tileValue: number): ISuperTileEffectStrategy;
 }
 
 export class ThresholdCreationStrategy implements ISuperTileCreationStrategy {
-    private readonly kinds: number[];
-    private readonly thresholds: number[];
+    public readonly colorCount: number;
+    private readonly strategies: ISuperTileEffectStrategy[];
 
-    constructor(rules: SuperTileRule[]) {
-        this.kinds = new Array<number>(rules.length);
-        this.thresholds = new Array<number>(rules.length);
-        let previous = 2;
-        const kinds: boolean[] = [];
-        for (let i = 0; i < rules.length; i++) {
-            const rule = rules[i];
-            if (!Number.isInteger(rule.kind) || rule.kind <= 0 || kinds[rule.kind]
-                || !Number.isInteger(rule.minimumGroupSize) || rule.minimumGroupSize < previous) {
-                throw new Error("Super tile rules require unique positive kinds and nondecreasing integer thresholds >= 2.");
-            }
-            kinds[rule.kind] = true;
-            this.kinds[i] = rule.kind;
-            this.thresholds[i] = rule.minimumGroupSize;
-            previous = rule.minimumGroupSize;
-        }
-    }
-
-    /** При равных порогах приоритет у последнего правила в конфиге. */
-    public selectKind(groupSize: number): TileKind {
-        for (let i = this.kinds.length - 1; i >= 0; i--) {
-            if (groupSize >= this.thresholds[i]) {
-                return this.kinds[i];
+    constructor(strategies: ISuperTileEffectStrategy[], colorCount: number) {
+        this.colorCount = colorCount;
+        this.strategies = strategies.slice();
+        for (let i = 0; i < strategies.length; i++) {
+            if (!Number.isInteger(strategies[i].minimumGroupSize) || strategies[i].minimumGroupSize < 2) {
+                throw new Error("Super tile minimum group size must be an integer >= 2.");
             }
         }
-        return TileKind.Normal;
-    }
-}
-
-export class RowEffectStrategy implements ISuperTileEffectStrategy {
-    public collectTargets(originIndex: number, context: EffectContext, targets: number[]): number {
-        const start = originIndex - originIndex % context.columns;
-        for (let i = 0; i < context.columns; i++) {
-            targets[i] = start + i;
-        }
-        return context.columns;
-    }
-}
-
-export class ColumnEffectStrategy implements ISuperTileEffectStrategy {
-    public collectTargets(originIndex: number, context: EffectContext, targets: number[]): number {
-        let count = 0;
-        for (let i = originIndex % context.columns; i < context.capacity; i += context.columns) {
-            targets[count++] = i;
-        }
-        return count;
-    }
-}
-
-export class RadiusEffectStrategy implements ISuperTileEffectStrategy {
-    private readonly radius: number;
-
-    constructor(radius: number) {
-        if (!Number.isInteger(radius) || radius < 1) {
-            throw new Error("Super tile radius must be a positive integer.");
-        }
-        this.radius = radius;
     }
 
-    public collectTargets(originIndex: number, context: EffectContext, targets: number[]): number {
-        const column = originIndex % context.columns;
-        const row = Math.floor(originIndex / context.columns);
-        const firstRow = Math.max(0, row - this.radius);
-        const lastRow = Math.min(context.capacity / context.columns - 1, row + this.radius);
-        const firstColumn = Math.max(0, column - this.radius);
-        const lastColumn = Math.min(context.columns - 1, column + this.radius);
-        let count = 0;
-        for (let y = firstRow; y <= lastRow; y++) {
-            for (let x = firstColumn; x <= lastColumn; x++) {
-                targets[count++] = y * context.columns + x;
+    /** Максимальный подходящий порог; при равенстве побеждает последний префаб. */
+    public selectTile(groupSize: number): number {
+        let selected = -1;
+        let threshold = -1;
+        for (let i = 0; i < this.strategies.length; i++) {
+            const strategy = this.strategies[i];
+            if (groupSize >= strategy.minimumGroupSize && strategy.minimumGroupSize >= threshold) {
+                selected = this.colorCount + i;
+                threshold = strategy.minimumGroupSize;
             }
         }
-        return count;
+        return selected;
     }
-}
 
-export class BoardEffectStrategy implements ISuperTileEffectStrategy {
-    public collectTargets(_originIndex: number, context: EffectContext, targets: number[]): number {
-        for (let i = 0; i < context.capacity; i++) {
-            targets[i] = i;
-        }
-        return context.capacity;
+    public getStrategy(tileValue: number): ISuperTileEffectStrategy {
+        return this.strategies[tileValue - this.colorCount] || null;
     }
 }

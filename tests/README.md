@@ -68,21 +68,15 @@ different completion times without skipped or double updates, and reuse of the
 same objects across turns and after cancellation.
 
 
-`SuperTiles.test.ts` covers configurable creation thresholds (8/10/12/15 by default),
-conversion at the clicked cell, gravity preserving kinds, exclusion from normal groups,
-all four effect areas, clipped square radius, overlapping chains with one activation
-per super tile, no creation from effects, and controller render ordering.
-`BoardView.test.mjs` also checks transformation before falling and resetting the sprite
-when a super tile node is reused for a normal tile. Animation expectations use the
-current quadratic falling progress.
+Super tile strategy prefabs contain only a root node and a SuperTileStrategy component.
+The component holds minimumGroupSize, spriteFrame, and effect parameters such as radius.
+The factory reads prefab data once; it never instantiates strategy prefabs or creates pools.
+All tile visuals use the existing Tile prefab and one common TilePool. Transformation
+changes the sprite on the existing node. Board cells contain only numbers: -1 is empty, 0..colorCount-1 are colors,
+and colorCount + prefab index identifies a super tile in the shared strategy registry.
 
-Super tile effects are registered once by `SuperTileFactory`; to add a type, add its
-kind in `SuperTileStrategies.ts`, implement `ISuperTileEffectStrategy`, register it
-in the factory, and configure its creation threshold and Inspector sprite (kind - 1).
-Creation policy is injected separately through `ISuperTileCreationStrategy`.
-`BoardEngine` without injected super tile services retains basic group removal;
-production wiring through `GameFactory` always supplies the services.
-
-Creation thresholds may be equal (the last matching rule wins), but must not decrease.
-For example, 5/5/7/10 creates Column for groups of 5–6; Row is unreachable until
-its threshold is lower than Column. Duplicate kinds remain invalid.
+To add an effect, implement a SuperTileStrategy component, attach it to an empty prefab,
+configure its threshold and sprite, and add it to GameBootstrap.superTilePrefabs.
+The highest eligible threshold wins; equal thresholds use the last prefab in the list.
+The scene thresholds remain 5/5/7/10. Tests cover reference identity, chains, effect areas,
+no strategy prefab instantiation or extra pools, and common-pool sprite reset after reuse.

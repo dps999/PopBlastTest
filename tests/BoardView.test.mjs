@@ -68,7 +68,7 @@ function createView(rows, columns, cells) {
     const colorSprites = ["red", "blue", "green"];
     const tileRenderer = new BoardTileRenderer();
     tileRenderer.fallSpeed = 10;
-    tileRenderer.init({ tilePool: pool, colorSprites, superTileSprites: ["row", "column", "radius", "board"], config, inputService: input });
+    tileRenderer.init({ tilePool: pool, colorSprites, config, inputService: input });
     view.init({ tileRenderer, colorSprites, config });
     view.initRender(cells);
     return { view, input, released, pool };
@@ -265,18 +265,25 @@ it("updates animations in BoardTileRenderer independently of BoardView", functio
 });
 
 
-it("preserves a transformed pooled tile through falling and resets its sprite on refill", function superTileRendering() {
-    const { view } = createView(2, 2, [0, 1, 2, 0]);
-    const superTile = view.tileRenderer.tiles[2];
+it("changes the sprite in place and reuses the same common pool", function strategyRendering() {
+    const { view, released, pool } = createView(2, 2, [0, 1, 2, 0]);
+    const tile = view.tileRenderer.tiles[2];
+    const created = pool.createdCount;
+    const strategy = { spriteFrame: "row" };
+    view.tileRenderer.superTiles = { getStrategy(value) { return value === 3 ? strategy : null; } };
+    view.transformTile(2, 3);
+    assert.strictEqual(view.tileRenderer.tiles[2], tile);
+    assert.equal(tile.frame, "row");
+    assert.equal(pool.createdCount, created);
+    assert.equal(released.length, 0);
     view.removeTiles([0], 1);
-    view.transformTile(2, 1);
-    assert.equal(superTile.frame, "row");
-    view.fallTiles([{ from: 2, to: 0 }], 1, [0, 1, 2, 0], [2], 1, [1, 0, 0, 0]);
+    view.fallTiles([{ from: 2, to: 0 }], 1, [0, 1, 2, 0], [2], 1);
     stepView(view, 100);
-    assert.strictEqual(view.tileRenderer.tiles[0], superTile);
-    assert.equal(superTile.frame, "row");
+    assert.strictEqual(view.tileRenderer.tiles[0], tile);
+    assert.equal(tile.frame, "row");
     view.removeTiles([0], 1);
-    view.fallTiles([], 0, [1, 1, 2, 0], [0], 1, [0, 0, 0, 0]);
-    assert.strictEqual(view.tileRenderer.tiles[0], superTile);
-    assert.equal(superTile.frame, "blue");
+    view.fallTiles([], 0, [1, 1, 2, 0], [0], 1);
+    assert.strictEqual(view.tileRenderer.tiles[0], tile);
+    assert.equal(tile.frame, "blue");
+    assert.equal(pool.createdCount, created);
 });

@@ -1,25 +1,31 @@
-import { BoardEffectStrategy, ColumnEffectStrategy, RadiusEffectStrategy, RowEffectStrategy, ThresholdCreationStrategy, TileKind } from "./SuperTileStrategies";
-import type { ISuperTileCreationStrategy, ISuperTileEffectStrategy, SuperTileRule } from "./SuperTileStrategies";
+import SuperTileStrategy from "./SuperTileStrategy";
+import { ThresholdCreationStrategy } from "./SuperTileStrategies";
+import type { ISuperTileEffectStrategy } from "./SuperTileStrategies";
 
-export interface SuperTileServices {
-    creation: ISuperTileCreationStrategy;
-    effects: ISuperTileEffectStrategy[];
-}
-
-/** Точка регистрации типов. Стратегии создаются один раз для поля. */
+/** Читает стратегии из префабов без создания узлов и пулов. */
 export class SuperTileFactory {
-    public static create(rules: SuperTileRule[], radius: number): SuperTileServices {
-        const effects: ISuperTileEffectStrategy[] = [];
-        effects[TileKind.Row] = new RowEffectStrategy();
-        effects[TileKind.Column] = new ColumnEffectStrategy();
-        effects[TileKind.Radius] = new RadiusEffectStrategy(radius);
-        effects[TileKind.Board] = new BoardEffectStrategy();
-        const creation = new ThresholdCreationStrategy(rules);
-        for (let i = 0; i < rules.length; i++) {
-            if (!effects[rules[i].kind]) {
-                throw new Error("No registered effect for super tile kind " + rules[i].kind);
+    public readonly creation: ThresholdCreationStrategy;
+
+    constructor(prefabs: cc.Prefab[], colorCount: number) {
+        const strategies = new Array<ISuperTileEffectStrategy>(prefabs.length);
+        for (let i = 0; i < prefabs.length; i++) {
+            const prefab = prefabs[i];
+            if (!prefab || !prefab.data) {
+                throw new Error("Missing strategy prefab.");
             }
+            const components = prefab.data.getComponents(SuperTileStrategy);
+            if (components.length !== 1) {
+                throw new Error("Strategy prefab requires exactly one SuperTileStrategy component.");
+            }
+            const strategy = components[0];
+            strategy.validate();
+            for (let j = 0; j < i; j++) {
+                if (strategies[j] === strategy) {
+                    throw new Error("Duplicate strategy prefab.");
+                }
+            }
+            strategies[i] = strategy;
         }
-        return { creation, effects };
+        this.creation = new ThresholdCreationStrategy(strategies, colorCount);
     }
 }

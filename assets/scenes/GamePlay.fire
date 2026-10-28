@@ -1526,61 +1526,26 @@
         "__uuid__": "8c849c89-c180-4074-a095-df59f3f9f6e7"
       }
     ],
-    "superTileSprites": [
+    "superTilePrefabs": [
       {
-        "__uuid__": "d56ddfad-b011-4663-b853-94d060de7dc7"
+        "__uuid__": "85c91078-a5eb-4380-8f04-35741eec6fc4"
       },
       {
-        "__uuid__": "6835de1f-fbfe-42d3-8f6e-7f99988347bd"
+        "__uuid__": "fce80b2d-7ed1-4e01-bf99-ae0a9a8e74c2"
       },
       {
-        "__uuid__": "6a8fcb30-c333-413d-8999-630aa5babb24"
+        "__uuid__": "4a932dd8-c6dc-4092-bc04-baacb832bde1"
       },
       {
-        "__uuid__": "e73a6686-cf22-4d97-90ab-2d78fafe5634"
+        "__uuid__": "03d94f21-62ae-4d92-9245-9f41526be97d"
       }
     ],
     "_id": "fenDJPMhRMOIXlVtfK92cN"
   },
   {
     "__type__": "GameConfig",
-    "superTileRules": [
-      {
-        "__id__": 36
-      },
-      {
-        "__id__": 37
-      },
-      {
-        "__id__": 38
-      },
-      {
-        "__id__": 39
-      }
-    ],
-    "superTileRadius": 1,
     "boardRows": 9,
     "boardColumns": 9,
     "colorCount": 3
-  },
-  {
-    "__type__": "SuperTileRuleConfig",
-    "kind": 1,
-    "minimumGroupSize": 5
-  },
-  {
-    "__type__": "SuperTileRuleConfig",
-    "kind": 2,
-    "minimumGroupSize": 5
-  },
-  {
-    "__type__": "SuperTileRuleConfig",
-    "kind": 3,
-    "minimumGroupSize": 7
-  },
-  {
-    "__type__": "SuperTileRuleConfig",
-    "kind": 4,
-    "minimumGroupSize": 10
   }
 ]

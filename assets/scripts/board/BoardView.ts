@@ -40,12 +40,12 @@ export default class BoardView extends cc.Component implements IBoardView, IInit
         this.refreshLayout();
     }
 
-    public initRender(cells: number[], kinds?: number[]): void {
-        this.tileRenderer.initRender(cells, kinds);
+    public initRender(cells: number[]): void {
+        this.tileRenderer.initRender(cells);
     }
 
-    public transformTile(index: number, kind: number): void {
-        this.tileRenderer.transformTile(index, kind);
+    public transformTile(index: number, value: number): void {
+        this.tileRenderer.transformTile(index, value);
     }
 
     public removeTiles(indices: number[], count: number): void {
@@ -57,10 +57,9 @@ export default class BoardView extends cc.Component implements IBoardView, IInit
         moveCount: number,
         cells: number[],
         spawnedIndices: number[],
-        spawnCount: number,
-        kinds?: number[]
+        spawnCount: number
     ): void {
-        this.tileRenderer.fallTiles(moves, moveCount, cells, spawnedIndices, spawnCount, kinds);
+        this.tileRenderer.fallTiles(moves, moveCount, cells, spawnedIndices, spawnCount);
     }
 
     private getTileSizeFromBackground(): cc.Size {

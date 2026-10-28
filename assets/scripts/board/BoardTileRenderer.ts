@@ -1,3 +1,4 @@
+import type { ISuperTileCreationStrategy } from "../superTiles/SuperTileStrategies";
 import type { IInitializable } from "../core/GameFactory";
 import type { GameConfig } from "../core/GameConfig";
 import type Tile from "../tiles/Tile";
@@ -7,7 +8,7 @@ import type { CellMove } from "./IBoardEngine";
 
 export interface BoardTileRendererDependencies {
     tilePool: TilePool;
-    superTileSprites?: cc.SpriteFrame[];
+    superTiles?: ISuperTileCreationStrategy;
     colorSprites: cc.SpriteFrame[];
     config: GameConfig;
     inputService: BoardInputService;
@@ -28,7 +29,7 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
     private landingBounceDuration: number = 0.16;
 
     private tilePool: TilePool;
-    private superTileSprites: cc.SpriteFrame[];
+    private superTiles: ISuperTileCreationStrategy;
     private colorSprites: cc.SpriteFrame[];
     private config: GameConfig;
     private inputService: BoardInputService;
@@ -49,7 +50,7 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
 
     public init(dependencies: BoardTileRendererDependencies): void {
         this.tilePool = dependencies.tilePool;
-        this.superTileSprites = dependencies.superTileSprites;
+        this.superTiles = dependencies.superTiles;
         this.colorSprites = dependencies.colorSprites;
         this.config = dependencies.config;
         this.inputService = dependencies.inputService;
@@ -77,32 +78,34 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
         this.refreshTilesLayout();
     }
 
-    public initRender(cells: number[], kinds?: number[]): void {
+    public initRender(cells: number[]): void {
         for (let i = 0; i < cells.length; i++) {
             if (cells[i] !== -1) {
-                this.spawnTile(i, cells[i], kinds ? kinds[i] : 0);
+                this.spawnTile(i, cells[i]);
             }
         }
     }
 
-    public transformTile(index: number, kind: number): void {
+    public transformTile(index: number, value: number): void {
         const tile = this.tiles[index];
-        tile.setSprite(this.superTileSprites[kind - 1]);
+        tile.setSprite(this.getSprite(value));
         tile.setSize(this.tileSize);
     }
 
     public removeTiles(indices: number[], count: number): void {
         for (let i = 0; i < count; i++) {
-            const index = indices[i];
-            const tile = this.tiles[index];
-            if (!tile) {
-                continue;
-            }
-
-            this.inputService.unbind(tile.sprite.node);
-            this.tilePool.release(tile);
-            this.tiles[index] = null;
+            this.releaseTile(indices[i]);
         }
+    }
+
+    private releaseTile(index: number): void {
+        const tile = this.tiles[index];
+        if (!tile) {
+            return;
+        }
+        this.inputService.unbind(tile.sprite.node);
+        this.tilePool.release(tile);
+        this.tiles[index] = null;
     }
 
     public fallTiles(
@@ -110,8 +113,7 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
         moveCount: number,
         cells: number[],
         spawnedIndices: number[],
-        spawnCount: number,
-        kinds?: number[]
+        spawnCount: number
     ): void {
         if (this.fallingCount > 0) {
             this.refreshTilesLayout();
@@ -138,19 +140,24 @@ export default class BoardTileRenderer extends cc.Component implements IInitiali
             const spawnRow = this.config.boardRows + this.columnSpawnCounts[column];
             this.columnSpawnCounts[column]++;
 
-            const tile = this.spawnTile(index, cells[index], kinds ? kinds[index] : 0);
+            const tile = this.spawnTile(index, cells[index]);
             tile.node.y = spawnRow * this.rowStep;
             this.startFalling(tile, index);
         }
     }
 
-    private spawnTile(index: number, color: number, kind: number = 0): Tile {
+    private spawnTile(index: number, value: number): Tile {
         const tile = this.tilePool.get();
-        tile.setSprite(kind === 0 ? this.colorSprites[color] : this.superTileSprites[kind - 1]);
+        tile.setSprite(this.getSprite(value));
         this.layoutTile(tile, index);
         this.tiles[index] = tile;
         this.inputService.bind(tile.sprite.node, index);
         return tile;
+    }
+
+    private getSprite(value: number): cc.SpriteFrame {
+        const strategy = this.superTiles ? this.superTiles.getStrategy(value) : null;
+        return strategy ? strategy.spriteFrame : this.colorSprites[value];
     }
 
     private startFalling(tile: Tile, index: number): void {

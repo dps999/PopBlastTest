@@ -3,9 +3,7 @@ export interface IBoardModel {
 
     getCells(): number[];
 
-    getTileKinds(): number[];
-
-    transformCell(index: number, kind: number): void;
+    transformCell(index: number, value: number): void;
 
     removeCells(indices: number[], count: number): void;
 

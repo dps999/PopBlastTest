@@ -1,5 +1,5 @@
 import type { CellMove, IBoardEngine, TurnResult } from "./IBoardEngine";
-import type { SuperTileServices } from "../superTiles/SuperTileFactory";
+import type { ISuperTileCreationStrategy } from "../superTiles/SuperTileStrategies";
 import type { EffectContext } from "../superTiles/SuperTileStrategies";
 import type { IBoardModel } from "./IBoardModel";
 
@@ -13,17 +13,17 @@ export class BoardEngine implements IBoardEngine {
     private readonly visited: Uint8Array;
     private readonly targets: number[];
     private readonly context: EffectContext;
-    private readonly superTiles: SuperTileServices;
+    private readonly creation: ISuperTileCreationStrategy;
     private readonly result: TurnResult;
 
 
-    constructor(model: IBoardModel, columns: number, capacity: number, superTiles?: SuperTileServices) {
+    constructor(model: IBoardModel, columns: number, capacity: number, creation?: ISuperTileCreationStrategy) {
         this.model = model;
         this.columns = columns;
         this.visited = new Uint8Array(capacity);
         this.targets = new Array<number>(capacity).fill(0);
         this.context = { columns, capacity };
-        this.superTiles = superTiles;
+        this.creation = creation;
         this.matches = new Array<number>(capacity).fill(0);
         this.moves = new Array<CellMove>(capacity);
         for (let i = 0; i < capacity; i++) {
@@ -31,7 +31,7 @@ export class BoardEngine implements IBoardEngine {
         }
         this.result = {
             valid: false, removedIndices: this.matches, matchCount: 0, removedCount: 0,
-            transformedIndex: -1, transformedKind: 0, moves: this.moves, moveCount: 0
+            transformedIndex: -1, transformedValue: -1, moves: this.moves, moveCount: 0
         };
     }
 
@@ -42,14 +42,13 @@ export class BoardEngine implements IBoardEngine {
         result.removedCount = 0;
         result.moveCount = 0;
         result.transformedIndex = -1;
-        result.transformedKind = 0;
+        result.transformedValue = -1;
         const cells = this.model.getCells();
         if (!Number.isInteger(index) || index < 0 || index >= cells.length || cells[index] < 0) {
             return result;
         }
-        const kinds = this.model.getTileKinds();
         let removedCount = 0;
-        if (kinds[index] !== 0) {
+        if (this.creation && cells[index] >= this.creation.colorCount) {
             removedCount = this.collectChain(index);
         } else {
             const count = this.findGroup(index, this.matches);
@@ -57,17 +56,17 @@ export class BoardEngine implements IBoardEngine {
                 return result;
             }
             result.matchCount = count;
-            const kind = this.superTiles ? this.superTiles.creation.selectKind(count) : 0;
+            const value = this.creation ? this.creation.selectTile(count) : -1;
             for (let i = 0; i < count; i++) {
                 const matched = this.matches[i];
-                if (kind === 0 || matched !== index) {
+                if (value < 0 || matched !== index) {
                     this.matches[removedCount++] = matched;
                 }
             }
-            if (kind !== 0) {
-                this.model.transformCell(index, kind);
+            if (value >= 0) {
+                this.model.transformCell(index, value);
                 result.transformedIndex = index;
-                result.transformedKind = kind;
+                result.transformedValue = value;
             }
         }
         this.model.removeCells(this.matches, removedCount);
@@ -79,21 +78,17 @@ export class BoardEngine implements IBoardEngine {
 
     /** Массив удаления одновременно служит очередью: каждая клетка добавляется один раз. */
     private collectChain(index: number): number {
-        if (!this.superTiles) {
-            throw new Error("Super tile services are required to activate a super tile.");
-        }
         this.visited.fill(0);
         this.matches[0] = index;
         this.visited[index] = 1;
         let count = 1;
         const cells = this.model.getCells();
-        const kinds = this.model.getTileKinds();
         for (let head = 0; head < count; head++) {
             const origin = this.matches[head];
-            if (kinds[origin] === 0) {
+            if (!this.creation || cells[origin] < this.creation.colorCount) {
                 continue;
             }
-            const effect = this.superTiles.effects[kinds[origin]];
+            const effect = this.creation.getStrategy(cells[origin]);
             if (!effect) {
                 throw new Error("Unregistered super tile effect.");
             }
@@ -140,8 +135,7 @@ export class BoardEngine implements IBoardEngine {
             return 0;
         }
 
-        const kinds = this.model.getTileKinds();
-        if (kinds[index] !== 0) {
+        if (this.creation && cells[index] >= this.creation.colorCount) {
             return 0;
         }
         this.visited.fill(0);
@@ -163,7 +157,7 @@ export class BoardEngine implements IBoardEngine {
     private visit(index: number, color: number, matches: number[], count: number): number {
         const cells = this.model.getCells();
         if (index >= 0 && index < cells.length && !this.visited[index]
-            && cells[index] === color && this.model.getTileKinds()[index] === 0) {
+            && cells[index] === color) {
             this.visited[index] = 1;
             matches[count++] = index;
         }

@@ -21,7 +21,7 @@ export class GameFactory {
         tilePrefab: cc.Prefab,
         colorSprites: cc.SpriteFrame[],
         config: GameConfig,
-        superTileSprites: cc.SpriteFrame[]
+        superTilePrefabs: cc.Prefab[]
     ): BoardController {
         if (config.colorCount < 2 || config.colorCount > 5 || config.colorCount % 1 !== 0) {
             throw new Error("Level color count must be an integer from 2 to 5.");
@@ -29,22 +29,17 @@ export class GameFactory {
         if (colorSprites.length < config.colorCount) {
             throw new Error("Not enough color sprites for the configured level color count.");
         }
-        for (let i = 0; i < config.superTileRules.length; i++) {
-            if (!superTileSprites[config.superTileRules[i].kind - 1]) {
-                throw new Error("Missing sprite for configured super tile kind.");
-            }
-        }
-        const superTiles = SuperTileFactory.create(config.superTileRules, config.superTileRadius);
+        const superTiles = new SuperTileFactory(superTilePrefabs, config.colorCount);
         const model = new BoardModel(config.boardRows, config.boardColumns);
         const tilePool = new TilePool(tilePrefab);
-        const engine = new BoardEngine(model, config.boardColumns, config.boardRows * config.boardColumns, superTiles);
+        const engine = new BoardEngine(model, config.boardColumns, config.boardRows * config.boardColumns, superTiles.creation);
         const spawnService = new SpawnService(config.colorCount);
         const controller = new BoardController(model, view, engine, spawnService);
         const inputService = new BoardInputService(controller);
         const tileRenderer = view.getComponent(BoardTileRenderer) || view.addComponent(BoardTileRenderer);
         tileRenderer.init({
             tilePool,
-            superTileSprites,
+            superTiles: superTiles.creation,
             colorSprites,
             config,
             inputService
