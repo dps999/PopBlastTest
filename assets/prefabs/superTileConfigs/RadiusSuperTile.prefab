@@ -82,14 +82,15 @@
     },
     "_enabled": true,
     "minimumGroupSize": 7,
-    "_id": "",
-    "radius": 1,
+    "spriteFrame": {
+      "__uuid__": "96363101-94e1-427a-a663-ed408ac1e557"
+    },
     "destructionParticles": {
       "__uuid__": "8e542d19-2118-42e0-914b-3c6bc3315ac3"
     },
-    "spriteFrame": {
-      "__uuid__": "96363101-94e1-427a-a663-ed408ac1e557"
-    }
+    "activationEffectPrefab": null,
+    "radius": 1,
+    "_id": ""
   },
   {
     "__type__": "cc.PrefabInfo",
@@ -99,7 +100,7 @@
     "asset": {
       "__id__": 0
     },
-    "fileId": "7c4301iuMxNqqqgc4hySXSo",
+    "fileId": "",
     "sync": false
   }
 ]

@@ -20,7 +20,6 @@ export default class BoosterButton extends cc.Component {
     private displayedCount: number = -1;
     private readonly normalColor: cc.Color = cc.color(255, 255, 255);
     private readonly activeColor: cc.Color = cc.color(255, 225, 100);
-    private readonly disabledColor: cc.Color = cc.color(150, 150, 150);
 
     public init(listener: IBoosterButtonListener, index: number, icon: cc.SpriteFrame): void {
         this.dispose();
@@ -42,34 +41,13 @@ export default class BoosterButton extends cc.Component {
         return iconNode ? iconNode.getComponent(cc.Sprite) : null;
     }
 
-    public moveQuantityLabelToLayer(layer: cc.Node): void {
-        if (!this.quantityLabel) {
-            return;
-        }
-
-        const labelNode = this.quantityLabel.node;
-        const layoutNode = this.node.parent;
-        if (!layer || !layoutNode || layer.parent !== layoutNode.parent || labelNode.parent === layer || layer.scaleX === 0 || layer.scaleY === 0) {
-            return;
-        }
-
-        const localX = (layoutNode.x + layoutNode.scaleX * (this.node.x + this.node.scaleX * labelNode.x) - layer.x) / layer.scaleX;
-        const localY = (layoutNode.y + layoutNode.scaleY * (this.node.y + this.node.scaleY * labelNode.y) - layer.y) / layer.scaleY;
-        const scaleX = layoutNode.scaleX * this.node.scaleX * labelNode.scaleX / layer.scaleX;
-        const scaleY = layoutNode.scaleY * this.node.scaleY * labelNode.scaleY / layer.scaleY;
-
-        labelNode.parent = layer;
-        labelNode.setPosition(localX, localY);
-        labelNode.setScale(scaleX, scaleY);
-    }
-
     public render(count: number, active: boolean, enabled: boolean): void {
         if (this.displayedCount !== count) {
             this.quantityLabel.string = String(count);
             this.displayedCount = count;
         }
         this.button.interactable = enabled;
-        const color = !enabled ? this.disabledColor : active ? this.activeColor : this.normalColor;
+        const color = active ? this.activeColor : this.normalColor;
         this.node.color = color;
         this.quantityLabel.node.color = color;
     }
