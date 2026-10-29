@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { it } from "node:test";
+import { readFileSync } from "node:fs";
 import { loadGameModule } from "./helpers/CocosComponents.mjs";
 
 const { default: BoardView } = await import(await loadGameModule("board/BoardView.ts"));
@@ -33,6 +34,8 @@ class TileStub {
 
 class ParticleStub {
     spriteFrame = "particle-atlas";
+    startColor = { r: 240, g: 235, b: 230, a: 220 };
+    endColor = { r: 210, g: 205, b: 200, a: 0 };
     stopped = false;
     particleCount = 0;
     resets = 0;
@@ -75,7 +78,11 @@ function createView(rows, columns, cells, initialize = true) {
     view.alignInitialPointToBackground = function testAlignment() {};
     view.tileSpacing = { width: 0, height: 0 };
     view.initialPoint = { childrenCount: rows * columns };
-    const config = { boardRows: rows, boardColumns: columns };
+    const config = { boardRows: rows, boardColumns: columns, particleColors: [
+        { r: 245, g: 60, b: 60, a: 123 },
+        { r: 55, g: 145, b: 255, a: 124 },
+        { r: 80, g: 210, b: 45, a: 125 }
+    ] };
     const colorSprites = ["red", "blue", "green"];
     const tileRenderer = new BoardTileRenderer();
     tileRenderer.fallSpeed = 10;
@@ -406,6 +413,83 @@ it("delays particles, keeps shrinking tiles out of the pool and locks input unti
     assert.equal(input.enabled, true);
     assert.equal(particles.node.active, false);
     assert.deepEqual(renderer.particlePool.items, particleNodes);
+});
+
+it("colors removal particles by each tile sprite with prefab start alpha and opaque end color", function particlePalette() {
+    const { view } = createView(1, 3, [0, 1, 2]);
+    const renderer = view.tileRenderer;
+    renderer.removeTiles([0, 1, 2], 3);
+    stepView(view, 0.09);
+    assert.equal(renderer.activeParticleCount, 3);
+    const expected = [
+        { r: 245, g: 60, b: 60, a: 220 },
+        { r: 55, g: 145, b: 255, a: 220 },
+        { r: 80, g: 210, b: 45, a: 220 }
+    ];
+    for (let i = 0; i < 3; i++) {
+        const particles = renderer.activeParticleSystems[i];
+        assert.deepEqual(particles.startColor, expected[i]);
+        expected[i].a = 255;
+        assert.deepEqual(particles.endColor, expected[i]);
+        assert.equal(particles.spriteFrame, "particle-atlas");
+        assert.equal(renderer.config.particleColors[i].a, 123 + i);
+    }
+});
+
+function recycleParticles(view) {
+    const particles = view.tileRenderer.activeParticleSystems[0];
+    particles.stopped = true;
+    particles.particleCount = 0;
+    stepView(view, 0);
+}
+
+it("retints pooled particles without replacing colors and resets unknown sprites to prefab colors", function pooledParticlePalette() {
+    const { view } = createView(1, 1, [0]);
+    const renderer = view.tileRenderer;
+    const tile = renderer.tiles[0];
+    renderer.setSelectedCell(0);
+    renderer.spawnParticles(tile);
+    const particles = renderer.activeParticleSystems[0];
+    const startColor = particles.startColor;
+    const endColor = particles.endColor;
+    assert.deepEqual(startColor, { r: 245, g: 60, b: 60, a: 220 });
+    recycleParticles(view);
+
+    renderer.transformTile(0, 1);
+    renderer.spawnParticles(tile);
+    assert.strictEqual(renderer.activeParticleSystems[0], particles);
+    assert.strictEqual(particles.startColor, startColor);
+    assert.strictEqual(particles.endColor, endColor);
+    assert.deepEqual(startColor, { r: 55, g: 145, b: 255, a: 220 });
+    assert.deepEqual(endColor, { r: 55, g: 145, b: 255, a: 255 });
+    recycleParticles(view);
+
+    tile.setSprite("special-tile");
+    renderer.spawnParticles(tile);
+    assert.strictEqual(renderer.activeParticleSystems[0], particles);
+    assert.deepEqual(startColor, { r: 240, g: 235, b: 230, a: 220 });
+    assert.deepEqual(endColor, { r: 210, g: 205, b: 200, a: 255 });
+});
+
+function isGameConfig(value) { return value.__type__ === "GameConfig"; }
+function hasColorSprites(value) { return Array.isArray(value.colorSprites); }
+
+it("configures five particle colors in the same order as the scene tile sprites", function sceneParticlePalette() {
+    const scene = JSON.parse(readFileSync(new URL("../assets/scenes/GamePlay.fire", import.meta.url)));
+    const config = scene.find(isGameConfig);
+    const bootstrap = scene.find(hasColorSprites);
+    assert.equal(config.particleColors.length, 5);
+    assert.equal(bootstrap.colorSprites.length, config.particleColors.length);
+    const channels = ["r", "g", "b", "a"];
+    for (let i = 0; i < config.particleColors.length; i++) {
+        assert.equal(typeof bootstrap.colorSprites[i].__uuid__, "string");
+        const color = config.particleColors[i];
+        assert.equal(color.__type__, "cc.Color");
+        for (let j = 0; j < channels.length; j++) {
+            const channel = color[channels[j]];
+            assert.ok(Number.isInteger(channel) && channel >= 0 && channel <= 255);
+        }
+    }
 });
 
 function createPipeline(merge) {

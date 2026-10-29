@@ -10,6 +10,12 @@ read source UVs or recalculate cells, while texture changes refresh the same cac
 The component adapts the Cocos
 Creator 2.4 web particle simulator; native JSB particles use a different renderer.
 
+`GameConfig.particleColors` supplies five RGB particle tints in the same order as
+`GameBootstrap.colorSprites`: blue, green, purple, red, yellow. `BoardView.test.mjs`
+checks sprite-based tint selection, unchanged prefab start alpha, opaque end color, reuse of
+particle/color objects, selection tint isolation and prefab colors for special
+sprites outside that palette. Tinting happens when the explosion starts.
+
 `Scoring.test.ts` runs the actual board engine, boosters, input controller, game
 model, session and GameView with a label stub. It covers configurable
 points per removed cell, cumulative scoring, super tile creation and overlapping

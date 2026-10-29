@@ -63,6 +63,9 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
     private activeParticleSystems: cc.ParticleSystem[] = [];
     private activeParticleCount: number = 0;
     private tileRemovalParticlePrefab: cc.Prefab;
+    private readonly particleColorsBySprite: Map<cc.SpriteFrame, cc.Color> = new Map<cc.SpriteFrame, cc.Color>();
+    private readonly defaultParticleStartColor: cc.Color = cc.color(255, 255, 255);
+    private readonly defaultParticleEndColor: cc.Color = cc.color(255, 255, 255, 0);
     private columnSpawnCounts: number[] = [];
     private selectedIndex: number = -1;
     private readonly selectedColor: cc.Color = cc.color(255, 225, 100);
@@ -144,6 +147,17 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
         if (!this.tileRemovalParticlePrefab) {
             throw new Error("BoardTileRenderer requires a tile removal particle prefab.");
         }
+        if (!this.config.particleColors || this.config.particleColors.length !== this.colorSprites.length) {
+            throw new Error("Particle colors must match colorSprites in count and order.");
+        }
+        this.particleColorsBySprite.clear();
+        for (let i = 0; i < this.colorSprites.length; i++) {
+            const color = this.config.particleColors[i];
+            if (!color) {
+                throw new Error("Each tile sprite requires a particle color.");
+            }
+            this.particleColorsBySprite.set(this.colorSprites[i], color);
+        }
         const cellCount = this.config.boardRows * this.config.boardColumns;
         this.tiles = new Array<Tile>(cellCount).fill(null);
         this.fallingStates = new Array(cellCount);
@@ -174,6 +188,10 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
             const particleSystem = node.getComponent(cc.ParticleSystem);
             if (!particleSystem) {
                 throw new Error("Tile removal particle prefab must contain cc.ParticleSystem.");
+            }
+            if (i === 0) {
+                cc.Color.copy(this.defaultParticleStartColor, particleSystem.startColor);
+                cc.Color.copy(this.defaultParticleEndColor, particleSystem.endColor);
             }
             particleSystem.playOnLoad = false;
             node.active = false;
@@ -266,9 +284,22 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
         node.parent = this.initialPoint;
         node.zIndex = this.tiles.length * 2;
         node.setPosition(tile.node.x, tile.node.y);
+        this.setParticleColor(particleSystem, this.particleColorsBySprite.get(tile.sprite.spriteFrame));
         node.active = true;
         particleSystem.resetSystem();
         this.activeParticleSystems[this.activeParticleCount++] = particleSystem;
+    }
+
+    private setParticleColor(particleSystem: cc.ParticleSystem, color: cc.Color): void {
+        const startColor = particleSystem.startColor;
+        const endColor = particleSystem.endColor;
+        cc.Color.copy(startColor, color || this.defaultParticleStartColor);
+        cc.Color.copy(endColor, color || this.defaultParticleEndColor);
+        startColor.a = this.defaultParticleStartColor.a;
+        endColor.a = 255;
+        // Сеттеры обновляют также нативный симулятор; сами cc.Color переиспользуются.
+        particleSystem.startColor = startColor;
+        particleSystem.endColor = endColor;
     }
 
     public fallTiles(
@@ -480,5 +511,6 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
             this.inputService.dispose();
         }
         this.particlePool.clear();
+        this.particleColorsBySprite.clear();
     }
 }

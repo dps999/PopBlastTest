@@ -4353,7 +4353,44 @@
     "__type__": "GameConfig",
     "boardRows": 9,
     "boardColumns": 9,
-    "colorCount": 4,
+    "colorCount": 5,
+    "particleColors": [
+      {
+        "__type__": "cc.Color",
+        "r": 53,
+        "g": 144,
+        "b": 255,
+        "a": 255
+      },
+      {
+        "__type__": "cc.Color",
+        "r": 85,
+        "g": 255,
+        "b": 38,
+        "a": 255
+      },
+      {
+        "__type__": "cc.Color",
+        "r": 193,
+        "g": 43,
+        "b": 247,
+        "a": 255
+      },
+      {
+        "__type__": "cc.Color",
+        "r": 241,
+        "g": 30,
+        "b": 30,
+        "a": 255
+      },
+      {
+        "__type__": "cc.Color",
+        "r": 255,
+        "g": 215,
+        "b": 60,
+        "a": 255
+      }
+    ],
     "initialMoves": 20,
     "targetScore": 500,
     "pointsPerTile": 10
