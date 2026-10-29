@@ -1,5 +1,7 @@
 import { BoardEffectType } from "../core/BoardEffectType";
 
+const ROCKET_SPEED: number = 1250;
+
 export interface IBoardEffectAnimationContext {
     playBombEffect(index: number): boolean;
     playRocketEffect(index: number, effectType: BoardEffectType): boolean;
@@ -78,6 +80,8 @@ interface RocketEffectState {
     secondTargetX: number;
     secondTargetY: number;
     elapsed: number;
+    firstDuration: number;
+    secondDuration: number;
     duration: number;
 }
 
@@ -109,15 +113,16 @@ export class RocketEffectPool {
             throw new Error("Rocket effect prefab requires RocketA and RocketB Sprite children.");
         }
         const visualConfig = prefab.data.getComponent("RocketFlightConfig") as { scaleMultiplier: number };
-        if (!visualConfig || !Number.isFinite(visualConfig.scaleMultiplier) || visualConfig.scaleMultiplier <= 0) {
-            throw new Error("Rocket effect prefab requires a positive scale multiplier.");
-        }
+        const configuredScaleMultiplier = visualConfig ? visualConfig.scaleMultiplier : 0;
+        const defaultScaleMultiplier: number = 3;
+        const scaleMultiplier = Number.isFinite(configuredScaleMultiplier) && configuredScaleMultiplier > 0
+            ? configuredScaleMultiplier : defaultScaleMultiplier;
         const spriteSize = firstSprite.spriteFrame.getOriginalSize();
         this.spriteWidth = spriteSize.width;
         this.spriteHeight = spriteSize.height;
 
         const scale = Math.min(tileSize.width * 0.38 / this.spriteWidth,
-            tileSize.height * 0.62 / this.spriteHeight) * visualConfig.scaleMultiplier;
+            tileSize.height * 0.62 / this.spriteHeight) * scaleMultiplier;
         for (let i = 0; i < capacity; i++) {
             const root = cc.instantiate(prefab);
             const rocketA = root.getChildByName("RocketA");
@@ -148,6 +153,8 @@ export class RocketEffectPool {
                 secondTargetX: 0,
                 secondTargetY: 0,
                 elapsed: 0,
+                firstDuration: 0,
+                secondDuration: 0,
                 duration: 0
             };
             this.states[i] = state;
@@ -180,8 +187,12 @@ export class RocketEffectPool {
         state.secondTargetX = secondTargetX;
         state.secondTargetY = secondTargetY;
         state.elapsed = 0;
-        state.duration = Math.max(0.22, Math.max(firstDistance, secondDistance) / 1250);
+        state.firstDuration = firstDistance / ROCKET_SPEED;
+        state.secondDuration = secondDistance / ROCKET_SPEED;
+        state.duration = Math.max(state.firstDuration, state.secondDuration);
         state.root.setPosition(0, 0);
+        state.firstRocket.active = true;
+        state.secondRocket.active = true;
         if (horizontal) {
             state.firstRocket.setPosition(startX, startY + this.splitOffset);
             state.secondRocket.setPosition(startX, startY - this.splitOffset);
@@ -202,24 +213,34 @@ export class RocketEffectPool {
         for (let i = 0; i < this.activeCount;) {
             const state = this.active[i];
             const elapsed = state.elapsed + deltaTime;
-            const progress = Math.min(1, elapsed / state.duration);
-            const easedProgress = progress * progress * (3 - 2 * progress);
+            const firstProgress = state.firstDuration > 0
+                ? Math.min(1, elapsed / state.firstDuration) : 1;
+            const secondProgress = state.secondDuration > 0
+                ? Math.min(1, elapsed / state.secondDuration) : 1;
             state.elapsed = elapsed;
-            state.firstRocket.x = state.startX
-                + (state.firstTargetX - state.startX) * easedProgress;
-            state.firstRocket.y = state.startY
-                + (state.firstTargetY - state.startY) * easedProgress;
-            state.secondRocket.x = state.startX
-                + (state.secondTargetX - state.startX) * easedProgress;
-            state.secondRocket.y = state.startY
-                + (state.secondTargetY - state.startY) * easedProgress;
-            if (progress < 1) {
+            if (firstProgress < 1) {
+                state.firstRocket.x = state.startX
+                    + (state.firstTargetX - state.startX) * firstProgress;
+                state.firstRocket.y = state.startY
+                    + (state.firstTargetY - state.startY) * firstProgress;
+            } else {
+                state.firstRocket.setPosition(state.firstTargetX, state.firstTargetY);
+                state.firstRocket.active = false;
+            }
+            if (secondProgress < 1) {
+                state.secondRocket.x = state.startX
+                    + (state.secondTargetX - state.startX) * secondProgress;
+                state.secondRocket.y = state.startY
+                    + (state.secondTargetY - state.startY) * secondProgress;
+            } else {
+                state.secondRocket.setPosition(state.secondTargetX, state.secondTargetY);
+                state.secondRocket.active = false;
+            }
+            if (elapsed < state.duration) {
                 i++;
                 continue;
             }
 
-            state.firstRocket.setPosition(state.firstTargetX, state.firstTargetY);
-            state.secondRocket.setPosition(state.secondTargetX, state.secondTargetY);
             state.root.active = false;
             const last = --this.activeCount;
             this.active[i] = this.active[last];

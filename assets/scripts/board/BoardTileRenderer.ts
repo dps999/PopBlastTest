@@ -85,6 +85,11 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
     private readonly originalColor: cc.Color = cc.color(255, 255, 255);
     private readonly removalDuration: number = 0.36;
     private readonly particleStartDelay: number = 0.08;
+    private readonly effectRemovalDelay: number = 0.1;
+    private effectRemovalElapsed: number = 0;
+    private effectRemovalPending: boolean = false;
+    private effectDelayPromise: Promise<boolean> = null;
+    private effectDelayResolver: (completed: boolean) => void = null;
     private mergeTargetTile: Tile = null;
     private mergeTargetElapsed: number = 0;
     private mergeTargetStartScale: number = 1;
@@ -96,6 +101,7 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
     private animationResolver: (completed: boolean) => void = null;
     private waitForRemovalOnly: boolean = false;
     private readonly animationExecutor = this.captureAnimationResolver.bind(this);
+    private readonly effectDelayExecutor = this.captureEffectDelayResolver.bind(this);
 
     public setInputLocked(locked: boolean): void {
         this.inputLocked = locked;
@@ -275,7 +281,37 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
     }
 
     public playEffects(indices: number[], effectTypes: BoardEffectType[], count: number): boolean {
-        return this.effectDispatcher.play(indices, effectTypes, count, this);
+        const started = this.effectDispatcher.play(indices, effectTypes, count, this);
+        if (started) {
+            this.effectRemovalElapsed = 0;
+            this.effectRemovalPending = true;
+        }
+        return started;
+    }
+
+    public waitForEffectDelay(): Promise<boolean> {
+        if (this.disposed || !this.effectRemovalPending) {
+            return Promise.resolve(!this.disposed);
+        }
+        if (!this.effectDelayPromise) {
+            this.effectDelayPromise = new Promise<boolean>(this.effectDelayExecutor);
+        }
+        return this.effectDelayPromise;
+    }
+
+    private captureEffectDelayResolver(resolve: (completed: boolean) => void): void {
+        this.effectDelayResolver = resolve;
+    }
+
+    private finishEffectDelay(completed: boolean): void {
+        const resolve = this.effectDelayResolver;
+        this.effectDelayResolver = null;
+        this.effectDelayPromise = null;
+        this.effectRemovalPending = false;
+        this.effectRemovalElapsed = 0;
+        if (resolve) {
+            resolve(completed);
+        }
     }
 
     public playRocketEffect(index: number, effectType: BoardEffectType): boolean {
@@ -454,6 +490,12 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
     }
 
     protected update(deltaTime: number): void {
+        if (this.effectRemovalPending) {
+            this.effectRemovalElapsed += deltaTime;
+            if (this.effectRemovalElapsed >= this.effectRemovalDelay) {
+                this.finishEffectDelay(true);
+            }
+        }
         if (this.rocketEffects) {
             this.rocketEffects.update(deltaTime);
         }
@@ -605,13 +647,14 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
     }
 
     private hasAnimations(): boolean {
-        return this.fallingCount > 0 || this.shuffleCount > 0 || this.removalCount > 0
+        return this.effectRemovalPending || this.fallingCount > 0 || this.shuffleCount > 0 || this.removalCount > 0
             || this.mergeTargetTile !== null || (this.explosionPool && this.explosionPool.isPlaying)
             || (this.rocketEffects && this.rocketEffects.isPlaying);
     }
 
     protected onDestroy(): void {
         this.disposed = true;
+        this.finishEffectDelay(false);
         this.finishAnimationWait(false);
         this.setSelectedCell(-1);
         this.stopFalling();

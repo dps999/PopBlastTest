@@ -68,9 +68,9 @@ export class BoardController implements IBoardController {
                 return await this.view.waitForAnimations();
             }
 
-            if (result.effectCount > 0
-                && this.view.playEffects(result.effectIndices, result.effectTypes, result.effectCount)
-                && !await this.view.waitForAnimations()) {
+            const effectsStarted = result.effectCount > 0
+                && this.view.playEffects(result.effectIndices, result.effectTypes, result.effectCount);
+            if (effectsStarted && !await this.view.waitForEffectDelay()) {
                 return false;
             }
 

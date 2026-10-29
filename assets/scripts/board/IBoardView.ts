@@ -10,6 +10,9 @@ export interface IBoardView {
 
     playEffects(indices: number[], effectTypes: BoardEffectType[], count: number): boolean;
 
+    /** Коротко ждёт перед удалением клеток, пока эффект начинает попадание. */
+    waitForEffectDelay(): Promise<boolean>;
+
     mergeTiles(indices: number[], count: number, targetIndex: number): void;
 
     swapTiles(first: number, second: number): void;
