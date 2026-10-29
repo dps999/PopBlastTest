@@ -266,7 +266,6 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
         node.parent = this.initialPoint;
         node.zIndex = this.tiles.length * 2;
         node.setPosition(tile.node.x, tile.node.y);
-        particleSystem.spriteFrame = tile.sprite.spriteFrame;
         node.active = true;
         particleSystem.resetSystem();
         this.activeParticleSystems[this.activeParticleCount++] = particleSystem;

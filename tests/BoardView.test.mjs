@@ -32,6 +32,7 @@ class TileStub {
 }
 
 class ParticleStub {
+    spriteFrame = "particle-atlas";
     stopped = false;
     particleCount = 0;
     resets = 0;
@@ -376,7 +377,7 @@ it("delays particles, keeps shrinking tiles out of the pool and locks input unti
     assert.equal(renderer.activeParticleCount, 1);
     const particles = renderer.activeParticleSystems[0];
     assert.ok(particleNodes.includes(particles.node));
-    assert.equal(particles.spriteFrame, "red");
+    assert.equal(particles.spriteFrame, "particle-atlas");
     assert.equal(particles.node.parent, view.initialPoint);
     assert.ok(particles.node.zIndex > renderer.tiles[0].node.zIndex);
     assert.ok(particles.node.zIndex > removed.node.zIndex);

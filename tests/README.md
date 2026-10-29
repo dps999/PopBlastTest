@@ -2,6 +2,14 @@
 
 Tests use Node.js's built-in test runner and TypeScript type stripping; there are no third-party test dependencies.
 
+`TiledParticleTexture.test.mjs` checks random 2x2 cell selection, stable UVs after
+particle compaction, reselection on pooled reuse, rotated atlas frames and the
+TileExplosion prefab's untrimmed particle sheet. Four UV sets are cached per
+component and reused across pooling. Tests check that particle updates do not
+read source UVs or recalculate cells, while texture changes refresh the same cache.
+The component adapts the Cocos
+Creator 2.4 web particle simulator; native JSB particles use a different renderer.
+
 `Scoring.test.ts` runs the actual board engine, boosters, input controller, game
 model, session and GameView with a label stub. It covers configurable
 points per removed cell, cumulative scoring, super tile creation and overlapping

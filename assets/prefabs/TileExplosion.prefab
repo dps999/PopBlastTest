@@ -21,10 +21,13 @@
     "_components": [
       {
         "__id__": 2
+      },
+      {
+        "__id__": 3
       }
     ],
     "_prefab": {
-      "__id__": 3
+      "__id__": 4
     },
     "_opacity": 255,
     "_color": {
@@ -90,7 +93,9 @@
     "_dstBlendFactor": 771,
     "_custom": true,
     "_file": null,
-    "_spriteFrame": null,
+    "_spriteFrame": {
+      "__uuid__": "9f87aa19-da7d-4fbd-bb65-95cadc7f887f"
+    },
     "_texture": null,
     "_stopped": true,
     "playOnLoad": false,
@@ -169,7 +174,17 @@
     "endRadiusVar": 0,
     "rotatePerS": 0,
     "rotatePerSVar": 0,
-    "_N$preview": false,
+    "_N$preview": true,
+    "_id": ""
+  },
+  {
+    "__type__": "5d8478r7PFPx6b5w462cNJU",
+    "_name": "",
+    "_objFlags": 0,
+    "node": {
+      "__id__": 1
+    },
+    "_enabled": true,
     "_id": ""
   },
   {

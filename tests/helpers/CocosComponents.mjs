@@ -21,7 +21,7 @@ const modules = new Map();
 export async function loadGameModule(relativePath) {
     const file = new URL(relativePath, new URL("../../assets/scripts/", import.meta.url));
     if (modules.has(file.href)) return modules.get(file.href);
-    let source = readFileSync(file, "utf8").replace(/^\s*@(?:ccclass|disallowMultiple|(?:property|requireComponent)\([^\n]*\))\s*$/gm, "");
+    let source = readFileSync(file, "utf8").replace(/^\s*@(?:ccclass|disallowMultiple|executeInEditMode|(?:property|requireComponent)\([^\n]*\))\s*$/gm, "");
     source = stripTypeScriptTypes(source);
     for (const match of source.matchAll(/from "(\.[^"]+)"/g)) {
         const dependency = new URL(match[1] + ".ts", file);
