@@ -39,8 +39,8 @@ const { ccclass, property, disallowMultiple } = cc._decorator;
 @ccclass
 @disallowMultiple
 export default class BoardTileRenderer extends cc.Component implements IBoardView {
-    @property({ min: 1, tooltip: "Средняя скорость ускоренного падения в локальных единицах поля в секунду." })
-    private fallSpeed: number = 800;
+    @property({ min: 1, tooltip: "Ускорение падения в локальных единицах поля в секунду в квадрате." })
+    private fallAcceleration: number = 16000;
 
     @property({ min: 0, tooltip: "Максимальная высота отскока при приземлении." })
     private landingBounceHeight: number = 6;
@@ -403,7 +403,7 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
         state.startY = tile.node.y;
         state.targetY = targetY;
         state.elapsed = 0;
-        state.duration = Math.abs(targetY - tile.node.y) / this.fallSpeed;
+        state.duration = Math.sqrt(2 * Math.abs(targetY - tile.node.y) / this.fallAcceleration);
     }
 
     protected update(deltaTime: number): void {
