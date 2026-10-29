@@ -287,7 +287,9 @@
     "_fillStart": 0,
     "_fillRange": 0,
     "_isTrimmedMode": true,
-    "_atlas": null,
+    "_atlas": {
+      "__uuid__": "23416f10-94c5-4fc4-87c6-fe967d49c8f9"
+    },
     "_id": ""
   },
   {
@@ -395,7 +397,7 @@
     "_N$verticalAlign": 1,
     "_N$fontFamily": "Arial",
     "_N$overflow": 1,
-    "_N$cacheMode": 1,
+    "_N$cacheMode": 0,
     "_id": ""
   },
   {
@@ -438,7 +440,9 @@
     "_fillStart": 0,
     "_fillRange": 0,
     "_isTrimmedMode": true,
-    "_atlas": null,
+    "_atlas": {
+      "__uuid__": "23416f10-94c5-4fc4-87c6-fe967d49c8f9"
+    },
     "_id": ""
   },
   {
