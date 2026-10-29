@@ -1,4 +1,4 @@
-import type { CellMove, IBoardEngine, TurnResult } from "./IBoardEngine";
+import type { CellMove, IBoardEngine, ShuffleResult, TurnResult } from "./IBoardEngine";
 import type { ISuperTileCreationStrategy } from "../superTiles/SuperTileStrategies";
 import type { EffectContext } from "../superTiles/SuperTileStrategies";
 import type { IBoardModel } from "./IBoardModel";
@@ -8,6 +8,9 @@ export class BoardEngine implements IBoardEngine {
     private readonly model: IBoardModel;
     private readonly columns: number;
     private readonly moves: CellMove[];
+    private readonly shuffleSources: number[];
+    private readonly shuffleMoves: CellMove[];
+    private readonly shuffleResult: ShuffleResult;
     private readonly matches: number[];
 
     private readonly visited: Uint8Array;
@@ -26,9 +29,14 @@ export class BoardEngine implements IBoardEngine {
         this.creation = creation;
         this.matches = new Array<number>(capacity).fill(0);
         this.moves = new Array<CellMove>(capacity);
+        this.shuffleSources = new Array<number>(capacity);
+        this.shuffleMoves = new Array<CellMove>(capacity);
         for (let i = 0; i < capacity; i++) {
             this.moves[i] = { from: 0, to: 0 };
+            this.shuffleSources[i] = i;
+            this.shuffleMoves[i] = { from: 0, to: 0 };
         }
+        this.shuffleResult = { moves: this.shuffleMoves, moveCount: 0 };
         this.result = {
             valid: false, removedIndices: this.matches, matchCount: 0, removedCount: 0,
             transformedIndex: -1, transformedValue: -1, swappedFirstIndex: -1, swappedSecondIndex: -1,
@@ -108,6 +116,51 @@ export class BoardEngine implements IBoardEngine {
         result.swappedFirstIndex = first;
         result.swappedSecondIndex = second;
         return result;
+    }
+
+    public hasAvailableMove(): boolean {
+        const cells = this.model.getCells();
+        for (let i = 0; i < cells.length; i++) {
+            const value = cells[i];
+            if (value < 0) {
+                continue;
+            }
+            if (this.creation && value >= this.creation.colorCount) {
+                return true;
+            }
+            if (this.findGroup(i, this.matches) > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Сохраняет состав тайлов и возвращает перестановку для синхронизации отображения. */
+    public shuffle(): ShuffleResult {
+        const cells = this.model.getCells();
+        const count = Math.min(cells.length, this.shuffleSources.length);
+        for (let i = 0; i < count; i++) {
+            this.shuffleSources[i] = i;
+        }
+
+        for (let i = count - 1; i > 0; i--) {
+            const other = cc.math.randomRangeInt(0, i + 1);
+            if (other === i) {
+                continue;
+            }
+            this.model.swapCells(i, other);
+            const source = this.shuffleSources[i];
+            this.shuffleSources[i] = this.shuffleSources[other];
+            this.shuffleSources[other] = source;
+        }
+
+        for (let destination = 0; destination < count; destination++) {
+            const move = this.shuffleMoves[destination];
+            move.from = this.shuffleSources[destination];
+            move.to = destination;
+        }
+        this.shuffleResult.moveCount = count;
+        return this.shuffleResult;
     }
 
     private resetResult(): TurnResult {

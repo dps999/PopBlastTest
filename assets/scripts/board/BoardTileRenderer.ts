@@ -26,6 +26,15 @@ interface TileRemovalState {
     targetTile: Tile;
 }
 
+interface TileShuffleState {
+    tile: Tile;
+    startX: number;
+    startY: number;
+    targetX: number;
+    targetY: number;
+    elapsed: number;
+}
+
 const { ccclass, property, disallowMultiple } = cc._decorator;
 
 @ccclass
@@ -58,6 +67,9 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
         duration: number;
     }[] = [];
     private fallingCount: number = 0;
+    private shuffleStates: TileShuffleState[] = [];
+    private shuffleCount: number = 0;
+    private shuffleTilesBuffer: Tile[] = [];
     private removalStates: TileRemovalState[] = [];
     private removalCount: number = 0;
     private explosionPool: BombExplosionPool;
@@ -72,6 +84,7 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
     private mergeTargetElapsed: number = 0;
     private mergeTargetStartScale: number = 1;
     private readonly mergeTargetDuration: number = 0.24;
+    private readonly shuffleDuration: number = 0.3;
     private inputLocked: boolean = false;
     private disposed: boolean = false;
     private animationPromise: Promise<boolean> = null;
@@ -155,7 +168,9 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
         }
         const cellCount = this.config.boardRows * this.config.boardColumns;
         this.tiles = new Array<Tile>(cellCount).fill(null);
+        this.shuffleTilesBuffer = new Array<Tile>(cellCount).fill(null);
         this.fallingStates = new Array(cellCount);
+        this.shuffleStates = new Array<TileShuffleState>(cellCount);
         this.removalStates = new Array<TileRemovalState>(cellCount);
         // Состояния выделяются один раз при инициализации и переиспользуются во всех ходах.
         for (let i = 0; i < cellCount; i++) {
@@ -165,6 +180,14 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
                 targetY: 0,
                 elapsed: 0,
                 duration: 0
+            };
+            this.shuffleStates[i] = {
+                tile: null,
+                startX: 0,
+                startY: 0,
+                targetX: 0,
+                targetY: 0,
+                elapsed: 0
             };
             this.removalStates[i] = {
                 tile: null,
@@ -299,6 +322,43 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
         }
     }
 
+    public shuffleTiles(moves: CellMove[], moveCount: number): void {
+        this.setSelectedCell(-1);
+        this.stopFalling();
+        this.stopShuffling();
+
+        for (let i = 0; i < moveCount; i++) {
+            const move = moves[i];
+            const tile = this.tiles[move.from];
+            this.shuffleTilesBuffer[move.to] = tile;
+            if (!tile || move.from === move.to) {
+                continue;
+            }
+
+            const state = this.shuffleStates[this.shuffleCount++];
+            const column = move.to % this.config.boardColumns;
+            const row = Math.floor(move.to / this.config.boardColumns);
+            state.tile = tile;
+            state.startX = tile.node.x;
+            state.startY = tile.node.y;
+            state.targetX = column * this.columnStep;
+            state.targetY = row * this.rowStep;
+            state.elapsed = 0;
+        }
+
+        for (let i = 0; i < this.tiles.length; i++) {
+            const tile = this.shuffleTilesBuffer[i];
+            this.tiles[i] = tile;
+            this.shuffleTilesBuffer[i] = null;
+            if (!tile) {
+                continue;
+            }
+            tile.node.zIndex = i;
+            this.inputService.bind(tile.sprite.node, i);
+        }
+        this.updateInputState();
+    }
+
     private spawnTile(index: number, value: number): Tile {
         const tile = this.tilePool.get();
         tile.setSprite(this.getSprite(value));
@@ -359,6 +419,27 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
             this.fallingStates[lastActiveIndex] = state;
         }
 
+        for (let i = 0; i < this.shuffleCount;) {
+            const state = this.shuffleStates[i];
+            const tile = state.tile;
+            const elapsed = state.elapsed + deltaTime;
+            const progress = Math.min(1, elapsed / this.shuffleDuration);
+            const easedProgress = progress * progress * (3 - 2 * progress);
+            state.elapsed = elapsed;
+            tile.node.x = state.startX + (state.targetX - state.startX) * easedProgress;
+            tile.node.y = state.startY + (state.targetY - state.startY) * easedProgress;
+            if (progress < 1) {
+                i++;
+                continue;
+            }
+
+            tile.node.setPosition(state.targetX, state.targetY);
+            state.tile = null;
+            const lastActiveIndex = --this.shuffleCount;
+            this.shuffleStates[i] = this.shuffleStates[lastActiveIndex];
+            this.shuffleStates[lastActiveIndex] = state;
+        }
+
         for (let i = 0; i < this.removalCount;) {
             const state = this.removalStates[i];
             const tile = state.tile;
@@ -411,6 +492,7 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
 
     private refreshTilesLayout(): void {
         this.stopFalling();
+        this.stopShuffling();
         for (let i = 0; i < this.tiles.length; i++) {
             const tile = this.tiles[i];
             if (tile) {
@@ -436,6 +518,15 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
         this.updateInputState();
     }
 
+    private stopShuffling(): void {
+        for (let i = 0; i < this.shuffleCount; i++) {
+            const state = this.shuffleStates[i];
+            state.tile.node.setPosition(state.targetX, state.targetY);
+            state.tile = null;
+        }
+        this.shuffleCount = 0;
+    }
+
     private updateInputState(): void {
         if (this.inputService && !this.disposed) {
             this.inputService.setEnabled(!this.inputLocked && !this.hasAnimations());
@@ -443,7 +534,7 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
     }
 
     private hasAnimations(): boolean {
-        return this.fallingCount > 0 || this.removalCount > 0
+        return this.fallingCount > 0 || this.shuffleCount > 0 || this.removalCount > 0
             || this.mergeTargetTile !== null || (this.explosionPool && this.explosionPool.isPlaying);
     }
 
@@ -452,6 +543,7 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
         this.finishAnimationWait(false);
         this.setSelectedCell(-1);
         this.stopFalling();
+        this.stopShuffling();
         if (this.inputService) {
             this.inputService.dispose();
         }

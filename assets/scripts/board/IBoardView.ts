@@ -20,4 +20,7 @@ export interface IBoardView {
 
     /** Синхронно потребляет префиксы буферов и запускает общее падение. */
     fallTiles(moves: CellMove[], moveCount: number, cells: number[], spawnedIndices: number[], spawnCount: number): void;
+
+    /** Перемещает тайлы согласно перестановке из движка поля. */
+    shuffleTiles(moves: CellMove[], moveCount: number): void;
 }

@@ -22,8 +22,16 @@ export interface TurnResult {
     moveCount: number;
 }
 
+export interface ShuffleResult {
+    /** Переиспользуемый массив соответствий: исходная клетка -> новая клетка. */
+    moves: CellMove[];
+    moveCount: number;
+}
+
 export interface IBoardEngine {
     processClick(index: number): TurnResult;
     processRemoval(indices: number[], count: number): TurnResult;
     processSwap(first: number, second: number): TurnResult;
+    hasAvailableMove(): boolean;
+    shuffle(): ShuffleResult;
 }

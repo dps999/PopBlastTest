@@ -30,6 +30,32 @@ export class BoardController implements IBoardController {
         return this.engine.processClick(index);
     }
 
+    public async shuffleUntilMove(maxShuffles: number): Promise<boolean | null> {
+        if (this.engine.hasAvailableMove()) {
+            return true;
+        }
+        if (!Number.isInteger(maxShuffles) || maxShuffles < 1) {
+            return false;
+        }
+
+        this.view.setInputLocked(true);
+        try {
+            for (let attempt = 0; attempt < maxShuffles; attempt++) {
+                const shuffle = this.engine.shuffle();
+                this.view.shuffleTiles(shuffle.moves, shuffle.moveCount);
+                if (!await this.view.waitForAnimations()) {
+                    return null;
+                }
+                if (this.engine.hasAvailableMove()) {
+                    return true;
+                }
+            }
+            return false;
+        } finally {
+            this.view.setInputLocked(false);
+        }
+    }
+
     public async applyTurnResult(result: TurnResult | null): Promise<boolean> {
         if (!result || !result.valid) {
             return false;

@@ -7,6 +7,7 @@ import { GamePhase } from "./GameStateContracts";
 
 /** Координирует действие поля, учёт результата и существующую FSM. */
 export class GameController implements IBoardInputHandler, IBoardInputStateListener {
+    private readonly maxAutoShuffles: number = 3;
     private readonly board: IBoardController;
     private readonly boosters: IBoosterInputController;
     private readonly model: IGameModel;
@@ -30,10 +31,36 @@ export class GameController implements IBoardInputHandler, IBoardInputStateListe
         this.boosters.init();
         this.view.render(this.model.getState());
         this.session.handleEvent(GameEventType.LevelStarted);
+        this.prepareInitialBoard();
     }
 
     public onInputEnabledChanged(enabled: boolean): void {
         this.boosters.onInputEnabledChanged(enabled && this.session.canAcceptInput());
+    }
+
+    private async prepareInitialBoard(): Promise<void> {
+        try {
+            const hasMove = await this.board.shuffleUntilMove(this.maxAutoShuffles);
+            if (this.session.getPhase() !== GamePhase.Playing) {
+                return;
+            }
+            if (hasMove === null) {
+                this.session.stop();
+                this.onInputEnabledChanged(false);
+                return;
+            }
+            if (!hasMove) {
+                this.session.handleEvent(GameEventType.LevelLost);
+                this.onInputEnabledChanged(false);
+                this.view.showResult(false, this.model.getState());
+                return;
+            }
+            this.onInputEnabledChanged(true);
+        } catch (error) {
+            this.session.stop();
+            this.onInputEnabledChanged(false);
+            cc.error(error);
+        }
     }
 
     public async onCellClicked(index: number): Promise<void> {
@@ -61,7 +88,19 @@ export class GameController implements IBoardInputHandler, IBoardInputStateListe
                 return;
             }
             const won = this.model.isWon();
-            const lost = this.model.isLost();
+            let lost = this.model.isLost();
+            if (!won && !lost) {
+                const hasMove = await this.board.shuffleUntilMove(this.maxAutoShuffles);
+                if (this.session.getPhase() !== GamePhase.Resolving) {
+                    return;
+                }
+                if (hasMove === null) {
+                    this.session.stop();
+                    this.onInputEnabledChanged(false);
+                    return;
+                }
+                lost = !hasMove;
+            }
             this.session.handleEvent(won ? GameEventType.LevelWon
                 : lost ? GameEventType.LevelLost : GameEventType.TurnResolved);
             this.onInputEnabledChanged(true);

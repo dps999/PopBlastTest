@@ -4,6 +4,8 @@ export interface IBoardController {
     init(): void;
     processClick(index: number): TurnResult;
     applyTurnResult(result: TurnResult | null): Promise<boolean>;
+    /** Перемешивает поле до появления допустимого хода; null означает прерванную анимацию. */
+    shuffleUntilMove(maxShuffles: number): Promise<boolean | null>;
 }
 
 /** Обработчик клика, подключаемый к визуальным клеткам поля. */
