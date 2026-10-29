@@ -5,6 +5,7 @@ import type { TilePool } from "../tiles/TilePool";
 import type { BoardInputService } from "./BoardInputService";
 import type { CellMove } from "./IBoardEngine";
 import type { IBoardView } from "./IBoardView";
+import BombExplosionPool from "../tiles/BombExplosionPool";
 
 export interface BoardTileRendererDependencies {
     tilePool: TilePool;
@@ -59,13 +60,8 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
     private fallingCount: number = 0;
     private removalStates: TileRemovalState[] = [];
     private removalCount: number = 0;
-    private particlePool: cc.NodePool = new cc.NodePool();
-    private activeParticleSystems: cc.ParticleSystem[] = [];
-    private activeParticleCount: number = 0;
-    private tileRemovalParticlePrefab: cc.Prefab;
+    private explosionPool: BombExplosionPool;
     private readonly particleColorsBySprite: Map<cc.SpriteFrame, cc.Color> = new Map<cc.SpriteFrame, cc.Color>();
-    private readonly defaultParticleStartColor: cc.Color = cc.color(255, 255, 255);
-    private readonly defaultParticleEndColor: cc.Color = cc.color(255, 255, 255, 0);
     private columnSpawnCounts: number[] = [];
     private selectedIndex: number = -1;
     private readonly selectedColor: cc.Color = cc.color(255, 225, 100);
@@ -143,9 +139,8 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
         this.colorSprites = dependencies.colorSprites;
         this.config = dependencies.config;
         this.inputService = dependencies.inputService;
-        this.tileRemovalParticlePrefab = dependencies.tileRemovalParticlePrefab;
-        if (!this.tileRemovalParticlePrefab) {
-            throw new Error("BoardTileRenderer requires a tile removal particle prefab.");
+        if (!dependencies.tileRemovalParticlePrefab) {
+            throw new Error("BoardTileRenderer requires an explosion pool prefab.");
         }
         if (!this.config.particleColors || this.config.particleColors.length !== this.colorSprites.length) {
             throw new Error("Particle colors must match colorSprites in count and order.");
@@ -162,7 +157,6 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
         this.tiles = new Array<Tile>(cellCount).fill(null);
         this.fallingStates = new Array(cellCount);
         this.removalStates = new Array<TileRemovalState>(cellCount);
-        this.activeParticleSystems = new Array<cc.ParticleSystem>(cellCount);
         // Состояния выделяются один раз при инициализации и переиспользуются во всех ходах.
         for (let i = 0; i < cellCount; i++) {
             this.fallingStates[i] = {
@@ -182,26 +176,21 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
                 targetTile: null
             };
         }
-        // Прогреваем пул один раз, чтобы уничтожение тайлов не создавало узлы в игровом цикле.
-        for (let i = 0; i < cellCount; i++) {
-            const node = cc.instantiate(this.tileRemovalParticlePrefab);
-            const particleSystem = node.getComponent(cc.ParticleSystem);
-            if (!particleSystem) {
-                throw new Error("Tile removal particle prefab must contain cc.ParticleSystem.");
-            }
-            if (i === 0) {
-                cc.Color.copy(this.defaultParticleStartColor, particleSystem.startColor);
-                cc.Color.copy(this.defaultParticleEndColor, particleSystem.endColor);
-            }
-            particleSystem.playOnLoad = false;
-            node.active = false;
-            this.particlePool.put(node);
+        const node = cc.instantiate(dependencies.tileRemovalParticlePrefab);
+        this.explosionPool = node.getComponent(BombExplosionPool);
+        if (!this.explosionPool) {
+            node.destroy();
+            throw new Error("Explosion pool prefab must contain BombExplosionPool.");
         }
+        this.explosionPool.tileCapacity = cellCount;
+        node.parent = this.node;
         this.columnSpawnCounts = new Array<number>(this.config.boardColumns).fill(0);
     }
 
     public setLayout(initialPoint: cc.Node, tileSize: cc.Size, tileSpacing: cc.Size): void {
         this.initialPoint = initialPoint;
+        this.explosionPool.node.parent = initialPoint;
+        this.explosionPool.node.zIndex = this.tiles.length * 2;
         this.tileSize = tileSize;
         this.columnStep = tileSize.width + tileSpacing.width;
         this.rowStep = tileSize.height + tileSpacing.height;
@@ -269,37 +258,7 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
     }
 
     private spawnParticles(tile: Tile): void {
-        if (this.activeParticleCount >= this.activeParticleSystems.length) {
-            return;
-        }
-        const node = this.particlePool.get();
-        if (!node) {
-            return;
-        }
-        const particleSystem = node.getComponent(cc.ParticleSystem);
-        if (!particleSystem) {
-            this.particlePool.put(node);
-            return;
-        }
-        node.parent = this.initialPoint;
-        node.zIndex = this.tiles.length * 2;
-        node.setPosition(tile.node.x, tile.node.y);
-        this.setParticleColor(particleSystem, this.particleColorsBySprite.get(tile.sprite.spriteFrame));
-        node.active = true;
-        particleSystem.resetSystem();
-        this.activeParticleSystems[this.activeParticleCount++] = particleSystem;
-    }
-
-    private setParticleColor(particleSystem: cc.ParticleSystem, color: cc.Color): void {
-        const startColor = particleSystem.startColor;
-        const endColor = particleSystem.endColor;
-        cc.Color.copy(startColor, color || this.defaultParticleStartColor);
-        cc.Color.copy(endColor, color || this.defaultParticleEndColor);
-        startColor.a = this.defaultParticleStartColor.a;
-        endColor.a = 255;
-        // Сеттеры обновляют также нативный симулятор; сами cc.Color переиспользуются.
-        particleSystem.startColor = startColor;
-        particleSystem.endColor = endColor;
+        this.explosionPool.playTile(tile.node.x, tile.node.y, this.particleColorsBySprite.get(tile.sprite.spriteFrame));
     }
 
     public fallTiles(
@@ -444,20 +403,6 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
             }
         }
 
-        for (let i = 0; i < this.activeParticleCount;) {
-            const particleSystem = this.activeParticleSystems[i];
-            if (!particleSystem.stopped || particleSystem.particleCount > 0) {
-                i++;
-                continue;
-            }
-            const node = particleSystem.node;
-            node.active = false;
-            this.particlePool.put(node);
-            const lastActiveIndex = --this.activeParticleCount;
-            this.activeParticleSystems[i] = this.activeParticleSystems[lastActiveIndex];
-            this.activeParticleSystems[lastActiveIndex] = null;
-        }
-
         if (!this.hasAnimations()) {
             this.finishAnimationWait(true);
         }
@@ -499,7 +444,7 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
 
     private hasAnimations(): boolean {
         return this.fallingCount > 0 || this.removalCount > 0
-            || this.mergeTargetTile !== null || this.activeParticleCount > 0;
+            || this.mergeTargetTile !== null || (this.explosionPool && this.explosionPool.isPlaying);
     }
 
     protected onDestroy(): void {
@@ -510,7 +455,10 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
         if (this.inputService) {
             this.inputService.dispose();
         }
-        this.particlePool.clear();
+        if (cc.isValid(this.explosionPool, true) && cc.isValid(this.explosionPool.node, true)) {
+            this.explosionPool.node.destroy();
+        }
+        this.explosionPool = null;
         this.particleColorsBySprite.clear();
     }
 }

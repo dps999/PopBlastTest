@@ -2,6 +2,14 @@
 
 Tests use Node.js's built-in test runner and TypeScript type stripping; there are no third-party test dependencies.
 
+`BombExplosionPool.test.mjs` checks both local pools' prewarming, exhaustion,
+node/component/color reuse, particle lifetime, independent return and cleanup. Run it with
+`node --test tests/BombExplosionPool.test.mjs` (Node.js 22.18+, no extra dependencies).
+The pool owns both TileExplosion and BombExplosion; BoardTileRenderer only calls
+playTile with a position and color and waits for isPlaying to become false.
+Cleanup checks cover Cocos destroying child components before the pool component,
+nodes already queued for destruction and repeated cleanup.
+
 `TiledParticleTexture.test.mjs` checks random 2x2 cell selection, stable UVs after
 particle compaction, reselection on pooled reuse, rotated atlas frames and the
 TileExplosion prefab's untrimmed particle sheet. Four UV sets are cached per

@@ -5,15 +5,17 @@ import { loadGameModule } from "./helpers/CocosComponents.mjs";
 
 const { default: BoardView } = await import(await loadGameModule("board/BoardView.ts"));
 const { default: BoardTileRenderer } = await import(await loadGameModule("board/BoardTileRenderer.ts"));
+const { default: BombExplosionPool } = await import(await loadGameModule("tiles/BombExplosionPool.ts"));
 const { BoardController } = await import(await loadGameModule("board/BoardController.ts"));
 
 function stepView(view, deltaTime) {
     const renderer = view.tileRenderer;
-    for (let i = 0; i < renderer.activeParticleCount; i++) {
-        const particles = renderer.activeParticleSystems[i];
+    for (let i = 0; i < renderer.explosionPool.tiles.activeCount; i++) {
+        const particles = renderer.explosionPool.tiles.active[i];
         particles.elapsed += deltaTime;
         if (particles.elapsed >= 0.42) { particles.stopped = true; particles.particleCount = 0; }
     }
+    renderer.explosionPool.update();
     view.update();
     view.tileRenderer.update(deltaTime);
 }
@@ -41,7 +43,8 @@ class ParticleStub {
     resets = 0;
     elapsed = 0;
     node = { active: false, parent: null, x: 0, y: 0, zIndex: 0,
-        setPosition(x, y) { this.x = x; this.y = y; } };
+        setPosition(x, y) { this.x = x; this.y = y; },
+        destroy() { this.destroyed = true; this.active = false; } };
     constructor() { this.node.particles = this; this.node.getComponent = particlesOf; }
     resetSystem() { this.stopped = false; this.elapsed = 0; this.resets++; }
 }
@@ -49,6 +52,21 @@ class ParticleStub {
 function particlesOf() { return this.particles; }
 
 const particlePrefab = { instantiate() { return new ParticleStub().node; } };
+
+function poolComponent() { return this.pool; }
+function destroyExplosionPool() { this.pool.onDestroy(); }
+function particleNode(particles) { return particles.node; }
+function instantiateExplosionPool() {
+    const pool = new BombExplosionPool();
+    pool.node = { parent: null, zIndex: 0, pool, getComponent: poolComponent, destroy: destroyExplosionPool };
+    pool.explosionPrefab = particlePrefab;
+    pool.tileExplosionPrefab = particlePrefab;
+    pool.capacity = 1;
+    pool.tileCapacity = this.tileCapacity;
+    pool.onLoad();
+    return pool.node;
+}
+
 
 function createView(rows, columns, cells, initialize = true) {
     const view = new BoardView();
@@ -86,7 +104,8 @@ function createView(rows, columns, cells, initialize = true) {
     const colorSprites = ["red", "blue", "green"];
     const tileRenderer = new BoardTileRenderer();
     tileRenderer.fallSpeed = 10;
-    tileRenderer.init({ tilePool: pool, colorSprites, config, inputService: input, tileRemovalParticlePrefab: particlePrefab });
+    const explosionPoolPrefab = { tileCapacity: rows * columns, instantiate: instantiateExplosionPool };
+    tileRenderer.init({ tilePool: pool, colorSprites, config, inputService: input, tileRemovalParticlePrefab: explosionPoolPrefab });
     view.init({ tileRenderer, colorSprites, config });
     if (initialize) { view.tileRenderer.initRender(cells); }
     return { view, input, released, pool };
@@ -329,7 +348,8 @@ it("updates animations in BoardTileRenderer independently of BoardView", functio
     renderer.update(100);
     assert.equal(fresh.node.y, 10);
     assert.equal(input.enabled, false);
-    renderer.activeParticleSystems[0].stopped = true;
+    renderer.explosionPool.tiles.active[0].stopped = true;
+    renderer.explosionPool.update();
     renderer.update(0);
     assert.equal(input.enabled, true);
 });
@@ -364,7 +384,7 @@ it("delays particles, keeps shrinking tiles out of the pool and locks input unti
     const { view, input, released, pool } = createView(1, 1, [0]);
     const renderer = view.tileRenderer;
     const removed = renderer.tiles[0];
-    const particleNodes = renderer.particlePool.items.slice();
+    const particleNodes = renderer.explosionPool.tiles.available.map(particleNode).slice();
     const states = renderer.removalStates;
     renderer.fallSpeed = 1000;
     view.tileRenderer.removeTiles([0], 1);
@@ -372,22 +392,23 @@ it("delays particles, keeps shrinking tiles out of the pool and locks input unti
     assert.equal(input.indices.get(removed.node), -1);
     assert.equal(input.enabled, false);
     assert.equal(released.length, 0);
-    assert.equal(renderer.activeParticleCount, 0);
+    assert.equal(renderer.explosionPool.tiles.activeCount, 0);
     view.tileRenderer.fallTiles([], 0, [1], [0], 1);
     assert.notStrictEqual(renderer.tiles[0], removed);
     assert.equal(pool.createdCount, 2);
     stepView(view, 0.04);
-    assert.equal(renderer.activeParticleCount, 0);
+    assert.equal(renderer.explosionPool.tiles.activeCount, 0);
     assert.ok(removed.node.scale < 1 && removed.node.scale > 0);
     assert.ok(removed.node.opacity < 255 && removed.node.opacity > 0);
     stepView(view, 0.05);
-    assert.equal(renderer.activeParticleCount, 1);
-    const particles = renderer.activeParticleSystems[0];
+    assert.equal(renderer.explosionPool.tiles.activeCount, 1);
+    const particles = renderer.explosionPool.tiles.active[0];
     assert.ok(particleNodes.includes(particles.node));
     assert.equal(particles.spriteFrame, "particle-atlas");
-    assert.equal(particles.node.parent, view.initialPoint);
-    assert.ok(particles.node.zIndex > renderer.tiles[0].node.zIndex);
-    assert.ok(particles.node.zIndex > removed.node.zIndex);
+    assert.equal(particles.node.parent, renderer.explosionPool.node);
+    assert.equal(renderer.explosionPool.node.parent, view.initialPoint);
+    assert.ok(renderer.explosionPool.node.zIndex > renderer.tiles[0].node.zIndex);
+    assert.ok(renderer.explosionPool.node.zIndex > removed.node.zIndex);
     assert.equal(particles.node.x, removed.node.x); assert.equal(particles.node.y, removed.node.y);
     assert.equal(particles.resets, 1);
     stepView(view, 0.1);
@@ -406,13 +427,13 @@ it("delays particles, keeps shrinking tiles out of the pool and locks input unti
     particles.stopped = true;
     particles.particleCount = 1;
     stepView(view, 0);
-    assert.equal(renderer.activeParticleCount, 1);
+    assert.equal(renderer.explosionPool.tiles.activeCount, 1);
     particles.particleCount = 0;
     stepView(view, 0);
-    assert.equal(renderer.activeParticleCount, 0);
+    assert.equal(renderer.explosionPool.tiles.activeCount, 0);
     assert.equal(input.enabled, true);
     assert.equal(particles.node.active, false);
-    assert.deepEqual(renderer.particlePool.items, particleNodes);
+    assert.deepEqual(renderer.explosionPool.tiles.available.map(particleNode), particleNodes);
 });
 
 it("colors removal particles by each tile sprite with prefab start alpha and opaque end color", function particlePalette() {
@@ -420,14 +441,14 @@ it("colors removal particles by each tile sprite with prefab start alpha and opa
     const renderer = view.tileRenderer;
     renderer.removeTiles([0, 1, 2], 3);
     stepView(view, 0.09);
-    assert.equal(renderer.activeParticleCount, 3);
+    assert.equal(renderer.explosionPool.tiles.activeCount, 3);
     const expected = [
         { r: 245, g: 60, b: 60, a: 220 },
         { r: 55, g: 145, b: 255, a: 220 },
         { r: 80, g: 210, b: 45, a: 220 }
     ];
     for (let i = 0; i < 3; i++) {
-        const particles = renderer.activeParticleSystems[i];
+        const particles = renderer.explosionPool.tiles.active[i];
         assert.deepEqual(particles.startColor, expected[i]);
         expected[i].a = 255;
         assert.deepEqual(particles.endColor, expected[i]);
@@ -437,7 +458,7 @@ it("colors removal particles by each tile sprite with prefab start alpha and opa
 });
 
 function recycleParticles(view) {
-    const particles = view.tileRenderer.activeParticleSystems[0];
+    const particles = view.tileRenderer.explosionPool.tiles.active[0];
     particles.stopped = true;
     particles.particleCount = 0;
     stepView(view, 0);
@@ -449,7 +470,7 @@ it("retints pooled particles without replacing colors and resets unknown sprites
     const tile = renderer.tiles[0];
     renderer.setSelectedCell(0);
     renderer.spawnParticles(tile);
-    const particles = renderer.activeParticleSystems[0];
+    const particles = renderer.explosionPool.tiles.active[0];
     const startColor = particles.startColor;
     const endColor = particles.endColor;
     assert.deepEqual(startColor, { r: 245, g: 60, b: 60, a: 220 });
@@ -457,7 +478,7 @@ it("retints pooled particles without replacing colors and resets unknown sprites
 
     renderer.transformTile(0, 1);
     renderer.spawnParticles(tile);
-    assert.strictEqual(renderer.activeParticleSystems[0], particles);
+    assert.strictEqual(renderer.explosionPool.tiles.active[0], particles);
     assert.strictEqual(particles.startColor, startColor);
     assert.strictEqual(particles.endColor, endColor);
     assert.deepEqual(startColor, { r: 55, g: 145, b: 255, a: 220 });
@@ -466,7 +487,7 @@ it("retints pooled particles without replacing colors and resets unknown sprites
 
     tile.setSprite("special-tile");
     renderer.spawnParticles(tile);
-    assert.strictEqual(renderer.activeParticleSystems[0], particles);
+    assert.strictEqual(renderer.explosionPool.tiles.active[0], particles);
     assert.deepEqual(startColor, { r: 240, g: 235, b: 230, a: 220 });
     assert.deepEqual(endColor, { r: 210, g: 205, b: 200, a: 255 });
 });
@@ -564,7 +585,7 @@ it("awaits removal particles as well as the removed tiles before starting fall",
     stepView(view, 0.27);
     await Promise.resolve();
     assert.equal(renderer.removalCount, 0);
-    assert.equal(renderer.activeParticleCount, 1);
+    assert.equal(renderer.explosionPool.tiles.activeCount, 1);
     assert.equal(renderer.fallingCount, 0);
     assert.equal(upper.node.y, 10);
     assert.equal(spawn.calls, 1);
@@ -572,7 +593,7 @@ it("awaits removal particles as well as the removed tiles before starting fall",
     stepView(view, 0.2);
     assert.equal(renderer.fallingCount, 0);
     await Promise.resolve();
-    assert.equal(renderer.activeParticleCount, 0);
+    assert.equal(renderer.explosionPool.tiles.activeCount, 0);
     assert.equal(renderer.fallingCount, 3);
     stepView(view, 2);
     assert.equal(await turn, true);
