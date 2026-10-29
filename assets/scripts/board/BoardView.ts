@@ -8,6 +8,7 @@ export interface BoardViewDependencies {
 }
 
 const { ccclass, property } = cc._decorator;
+const TILE_TOP_FACE_HEIGHT_RATIO = 0.14;
 
 @ccclass
 export default class BoardView extends cc.Component {
@@ -17,8 +18,8 @@ export default class BoardView extends cc.Component {
     @property({ type: cc.Node, tooltip: "Центр нижнего левого тайла (ряд 0, столбец 0)." })
     private initialPoint: cc.Node = null;
 
-    @property({ tooltip: "Зазор между тайлами по X и Y." })
-    private tileSpacing: cc.Size = cc.size(4, -25);
+    @property({ tooltip: "Отступ в масштабе исходного тайла; по Y отрицательное значение не перекрывает грани." })
+    private tileSpacing: cc.Size = cc.size(4, 0);
 
     @property({ min: 1, max: 1.25, tooltip: "Насколько клетки заполняют внутреннюю область рамки." })
     private tileFillFactor: number = 1.12;
@@ -26,7 +27,8 @@ export default class BoardView extends cc.Component {
     private tileRenderer: BoardTileRenderer;
     private colorSprites: cc.SpriteFrame[];
     private config: GameConfig;
-    private tileSize: cc.Size = cc.size(0, 0);
+    private readonly tileSize: cc.Size = cc.size(0, 0);
+    private readonly effectiveTileSpacing: cc.Size = cc.size(0, 0);
     private lastTileSpacingX: number = NaN;
     private lastTileSpacingY: number = NaN;
 
@@ -37,31 +39,38 @@ export default class BoardView extends cc.Component {
         this.refreshLayout();
     }
 
-    private getTileSizeFromBackground(): cc.Size {
+    private updateTileSizeFromBackground(): void {
         const backgroundNode = this.boardBackground.node;
         const spriteFrame = this.boardBackground.spriteFrame;
-        const scaleX = backgroundNode.scaleX / this.initialPoint.scaleX;
-        const scaleY = backgroundNode.scaleY / this.initialPoint.scaleY;
         const fieldWidth = backgroundNode.width - spriteFrame.insetLeft - spriteFrame.insetRight;
         const fieldHeight = backgroundNode.height - spriteFrame.insetTop - spriteFrame.insetBottom;
         const originalTileSize = this.colorSprites[0].getOriginalSize();
-        const availableWidth = fieldWidth * scaleX - this.tileSpacing.width * (this.config.boardColumns - 1);
-        const availableHeight = fieldHeight * scaleY - this.tileSpacing.height * (this.config.boardRows - 1);
+        const verticalFaceSpacing = Math.max(0, this.tileSpacing.height);
+        const availableWidth = fieldWidth * backgroundNode.scaleX / this.initialPoint.scaleX;
+        const availableHeight = fieldHeight * backgroundNode.scaleY / this.initialPoint.scaleY;
+        const tileColumnStepSize = originalTileSize.width + this.tileSpacing.width;
+        const tileRowStepSize = originalTileSize.height
+            + verticalFaceSpacing - originalTileSize.height * TILE_TOP_FACE_HEIGHT_RATIO;
+        const gridWidth = originalTileSize.width
+            + tileColumnStepSize * (this.config.boardColumns - 1);
+        const gridHeight = originalTileSize.height
+            + tileRowStepSize * (this.config.boardRows - 1);
         const tileScale = Math.max(0, Math.min(
-            availableWidth / (originalTileSize.width * this.config.boardColumns),
-            availableHeight / (originalTileSize.height * this.config.boardRows)
+            availableWidth / gridWidth,
+            availableHeight / gridHeight
         )) * this.tileFillFactor;
 
-        return cc.size(
-            originalTileSize.width * tileScale,
-            originalTileSize.height * tileScale
-        );
+        this.tileSize.width = originalTileSize.width * tileScale;
+        this.tileSize.height = originalTileSize.height * tileScale;
+        this.effectiveTileSpacing.width = this.tileSpacing.width * tileScale;
+        this.effectiveTileSpacing.height = (verticalFaceSpacing
+            - originalTileSize.height * TILE_TOP_FACE_HEIGHT_RATIO) * tileScale;
     }
 
     private refreshLayout(): void {
-        this.tileSize = this.getTileSizeFromBackground();
+        this.updateTileSizeFromBackground();
         this.alignInitialPointToBackground();
-        this.tileRenderer.setLayout(this.initialPoint, this.tileSize, this.tileSpacing);
+        this.tileRenderer.setLayout(this.initialPoint, this.tileSize, this.effectiveTileSpacing);
         this.lastTileSpacingX = this.tileSpacing.width;
         this.lastTileSpacingY = this.tileSpacing.height;
     }
@@ -82,11 +91,11 @@ export default class BoardView extends cc.Component {
             * backgroundNode.scaleY;
         const gridWidth = (
             this.tileSize.width * this.config.boardColumns
-            + this.tileSpacing.width * (this.config.boardColumns - 1)
+            + this.effectiveTileSpacing.width * (this.config.boardColumns - 1)
         ) * this.initialPoint.scaleX;
         const gridHeight = (
             this.tileSize.height * this.config.boardRows
-            + this.tileSpacing.height * (this.config.boardRows - 1)
+            + this.effectiveTileSpacing.height * (this.config.boardRows - 1)
         ) * this.initialPoint.scaleY;
         const firstTileX = fieldLeft + (fieldWidth - gridWidth) / 2
             + this.tileSize.width * this.initialPoint.scaleX / 2;

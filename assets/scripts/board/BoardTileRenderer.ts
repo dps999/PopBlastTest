@@ -5,7 +5,7 @@ import type { TilePool } from "../tiles/TilePool";
 import type { BoardInputService } from "./BoardInputService";
 import type { CellMove } from "./IBoardEngine";
 import type { IBoardView } from "./IBoardView";
-import BombExplosionPool from "../tiles/BombExplosionPool";
+import type BombExplosionPool from "../tiles/BombExplosionPool";
 
 export interface BoardTileRendererDependencies {
     tilePool: TilePool;
@@ -199,12 +199,12 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
 
     public setLayout(initialPoint: cc.Node, tileSize: cc.Size, tileSpacing: cc.Size): void {
         this.initialPoint = initialPoint;
-        this.explosionPool = this.initialPoint.getComponent(BombExplosionPool)
-            || this.initialPoint.getComponentInChildren(BombExplosionPool);
+        this.explosionPool = this.initialPoint.getComponent("BombExplosionPool") as BombExplosionPool
+            || this.initialPoint.getComponentInChildren("BombExplosionPool") as BombExplosionPool;
         if (!this.explosionPool) {
             const scene = cc.director.getScene();
             this.explosionPool = scene && scene !== this.initialPoint.parent
-                ? scene.getComponentInChildren(BombExplosionPool) : null;
+                ? scene.getComponentInChildren("BombExplosionPool") as BombExplosionPool : null;
         }
         if (!this.explosionPool) {
             throw new Error("Add BombExplosionPool to the scene or board InitialPoint.");
