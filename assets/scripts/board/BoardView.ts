@@ -1,6 +1,4 @@
 import type { GameConfig } from "../core/GameConfig";
-import type { IBoardView } from "./IBoardView";
-import type { CellMove } from "./IBoardEngine";
 import type BoardTileRenderer from "./BoardTileRenderer";
 
 export interface BoardViewDependencies {
@@ -12,7 +10,7 @@ export interface BoardViewDependencies {
 const { ccclass, property } = cc._decorator;
 
 @ccclass
-export default class BoardView extends cc.Component implements IBoardView {
+export default class BoardView extends cc.Component {
     @property({ type: cc.Sprite, tooltip: "Фон поля; размер его узла задаёт размеры ячеек." })
     private boardBackground: cc.Sprite = null;
 
@@ -37,48 +35,6 @@ export default class BoardView extends cc.Component implements IBoardView {
         this.colorSprites = dependencies.colorSprites;
         this.config = dependencies.config;
         this.refreshLayout();
-    }
-
-    public initRender(cells: number[]): void {
-        this.tileRenderer.initRender(cells);
-    }
-
-    public setInputLocked(locked: boolean): void {
-        this.tileRenderer.setInputLocked(locked);
-    }
-
-    public waitForAnimations(): Promise<boolean> {
-        return this.tileRenderer.waitForAnimations();
-    }
-
-    public transformTile(index: number, value: number): void {
-        this.tileRenderer.transformTile(index, value);
-    }
-
-    public removeTiles(indices: number[], count: number): void {
-        this.tileRenderer.removeTiles(indices, count);
-    }
-
-    public mergeTiles(indices: number[], count: number, targetIndex: number): void {
-        this.tileRenderer.mergeTiles(indices, count, targetIndex);
-    }
-
-    public swapTiles(first: number, second: number): void {
-        this.tileRenderer.swapTiles(first, second);
-    }
-
-    public setSelectedCell(index: number): void {
-        this.tileRenderer.setSelectedCell(index);
-    }
-
-    public fallTiles(
-        moves: CellMove[],
-        moveCount: number,
-        cells: number[],
-        spawnedIndices: number[],
-        spawnCount: number
-    ): void {
-        this.tileRenderer.fallTiles(moves, moveCount, cells, spawnedIndices, spawnCount);
     }
 
     private getTileSizeFromBackground(): cc.Size {

@@ -115,9 +115,11 @@ renderer cancels either phase without starting further work. Merge keeps tile sc
 Pooling checks that require a released tile explicitly finish its removal first.
 This checks numeric animation behaviour, not
 actual rendering; visual validation still requires Cocos Preview.
-BoardView calculates geometry and forwards render commands; BoardTileRenderer owns
-tile creation, pooling, input bindings, and the animation update. Tests run both
-components in frame order and verify that BoardView does not advance animations itself.
+BoardView calculates geometry and applies layout to BoardTileRenderer. BoardController
+uses BoardTileRenderer directly through IBoardView; booster selection also goes directly
+to BoardTileRenderer. The renderer owns tile creation, pooling, input bindings, and
+the animation update. Tests run both components in frame order and verify that
+BoardView does not advance animations itself.
 Fall-state tests also verify a fixed-capacity object buffer, a dense active prefix,
 different completion times without skipped or double updates, and reuse of the
 same objects across turns and after cancellation.

@@ -4,6 +4,7 @@ import type Tile from "../tiles/Tile";
 import type { TilePool } from "../tiles/TilePool";
 import type { BoardInputService } from "./BoardInputService";
 import type { CellMove } from "./IBoardEngine";
+import type { IBoardView } from "./IBoardView";
 
 export interface BoardTileRendererDependencies {
     tilePool: TilePool;
@@ -28,7 +29,7 @@ const { ccclass, property, disallowMultiple } = cc._decorator;
 
 @ccclass
 @disallowMultiple
-export default class BoardTileRenderer extends cc.Component {
+export default class BoardTileRenderer extends cc.Component implements IBoardView {
     @property({ min: 1, tooltip: "Средняя скорость ускоренного падения в локальных единицах поля в секунду." })
     private fallSpeed: number = 800;
 

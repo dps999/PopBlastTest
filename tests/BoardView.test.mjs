@@ -80,7 +80,7 @@ function createView(rows, columns, cells, initialize = true) {
     tileRenderer.fallSpeed = 10;
     tileRenderer.init({ tilePool: pool, colorSprites, config, inputService: input, tileRemovalParticlePrefab: particlePrefab });
     view.init({ tileRenderer, colorSprites, config });
-    if (initialize) { view.initRender(cells); }
+    if (initialize) { view.tileRenderer.initRender(cells); }
     return { view, input, released, pool };
 }
 
@@ -90,9 +90,9 @@ it("vertical teleport preserves row draw order, node identity, tint and input in
     const second = view.tileRenderer.tiles[4];
     assert.equal(first.node.zIndex, 0);
     assert.equal(second.node.zIndex, 4);
-    view.setSelectedCell(0);
+    view.tileRenderer.setSelectedCell(0);
     assert.deepEqual(first.node.color, { r: 255, g: 225, b: 100, a: 255 });
-    view.swapTiles(0, 4);
+    view.tileRenderer.swapTiles(0, 4);
     assert.strictEqual(view.tileRenderer.tiles[4], first);
     assert.strictEqual(view.tileRenderer.tiles[0], second);
     assert.equal(first.frame, "red"); assert.equal(second.frame, "blue");
@@ -106,22 +106,22 @@ it("vertical teleport preserves row draw order, node identity, tint and input in
     assert.ok(view.tileRenderer.tiles[2].node.zIndex < first.node.zIndex);
     assert.equal(input.enabled, true); assert.equal(pool.createdCount, 6); assert.equal(released.length, 0);
     assert.equal(view.tileRenderer.fallingCount, 0);
-    view.setSelectedCell(4); view.setSelectedCell(-1);
+    view.tileRenderer.setSelectedCell(4); view.tileRenderer.setSelectedCell(-1);
     assert.deepEqual(first.node.color, { r: 255, g: 255, b: 255, a: 255 });
-    view.swapTiles(4, 0);
+    view.tileRenderer.swapTiles(4, 0);
     assert.equal(first.node.zIndex, 0);
     assert.equal(second.node.zIndex, 4);
 });
 
 it("selection tint never leaks into pooled tiles after removal or destruction", function selectionCleanup() {
     const { view, released } = createView(1, 2, [0, 1]);
-    view.setSelectedCell(0); view.setSelectedCell(1);
+    view.tileRenderer.setSelectedCell(0); view.tileRenderer.setSelectedCell(1);
     assert.deepEqual(view.tileRenderer.tiles[0].node.color, { r: 255, g: 255, b: 255, a: 255 });
-    view.removeTiles([1], 1);
+    view.tileRenderer.removeTiles([1], 1);
     stepView(view, 0.36);
     assert.deepEqual(released[0].node.color, { r: 255, g: 255, b: 255, a: 255 });
     const tile = view.tileRenderer.tiles[0];
-    view.setSelectedCell(0); view.tileRenderer.onDestroy();
+    view.tileRenderer.setSelectedCell(0); view.tileRenderer.onDestroy();
     assert.deepEqual(tile.node.color, { r: 255, g: 255, b: 255, a: 255 });
 });
 
@@ -131,11 +131,11 @@ it("falls existing and pooled new tiles together and waits for the final landing
     const removed = view.tileRenderer.tiles[0];
     const fallingBuffer = view.tileRenderer.fallingStates;
     const originalStates = new Set(fallingBuffer);
-    view.removeTiles([0], 1);
+    view.tileRenderer.removeTiles([0], 1);
     assert.equal(input.indices.get(removed.node), -1);
     stepView(view, 0.36);
     assert.equal(released.length, 1);
-    view.fallTiles([{ from: 2, to: 0 }, { from: 4, to: 2 }], 2, [1, 0, 2, 2, 0, 1], [4, 999], 1);
+    view.tileRenderer.fallTiles([{ from: 2, to: 0 }, { from: 4, to: 2 }], 2, [1, 0, 2, 2, 0, 1], [4, 999], 1);
     const fresh = view.tileRenderer.tiles[4];
     assert.strictEqual(fresh, removed);
     assert.equal(released.length, 0);
@@ -171,8 +171,8 @@ it("falls existing and pooled new tiles together and waits for the final landing
 
 it("stacks new tiles above each column with different refill counts", function columnStacks() {
     const { view, input } = createView(3, 2, [0, 1, 2, 0, 1, 2]);
-    view.removeTiles([0, 2, 4, 5], 4);
-    view.fallTiles([], 0, [2, 1, 0, 0, 1, 2], [0, 2, 4, 5], 4);
+    view.tileRenderer.removeTiles([0, 2, 4, 5], 4);
+    view.tileRenderer.fallTiles([], 0, [2, 1, 0, 0, 1, 2], [0, 2, 4, 5], 4);
     assert.deepEqual([view.tileRenderer.tiles[0].node.y, view.tileRenderer.tiles[2].node.y, view.tileRenderer.tiles[4].node.y, view.tileRenderer.tiles[5].node.y], [30, 40, 50, 30]);
     assert.equal(view.tileRenderer.tiles[5].node.x, 10);
     stepView(view, 1.2);
@@ -187,9 +187,9 @@ it("stacks new tiles above each column with different refill counts", function c
 it("refills a fully removed board without requiring existing moves", function allNewTiles() {
     const { view, input } = createView(2, 2, [0, 0, 0, 0]);
     const originalTiles = view.tileRenderer.tiles.slice();
-    view.removeTiles([0, 1, 2, 3], 4);
+    view.tileRenderer.removeTiles([0, 1, 2, 3], 4);
     stepView(view, 0.36);
-    view.fallTiles([], 0, [1, 2, 0, 1], [0, 1, 2, 3], 4);
+    view.tileRenderer.fallTiles([], 0, [1, 2, 0, 1], [0, 1, 2, 3], 4);
     assert.deepEqual(view.tileRenderer.tiles.map(function y(tile) { return tile.node.y; }), [20, 20, 30, 30]);
     assert.ok(view.tileRenderer.tiles.every(function pooled(tile) { return originalTiles.includes(tile); }));
     assert.equal(input.enabled, false);
@@ -204,7 +204,7 @@ it("creates new tiles for empty cells when no released items are available", fun
     assert.equal(pool.createdCount, 1);
     assert.equal(released.length, 0);
 
-    view.fallTiles([], 0, [0, 2, 1, 0], [1, 2, 3, 999], 3);
+    view.tileRenderer.fallTiles([], 0, [0, 2, 1, 0], [1, 2, 3, 999], 3);
 
     assert.equal(pool.createdCount, 4);
     assert.strictEqual(view.tileRenderer.tiles[0], existing);
@@ -233,8 +233,8 @@ it("creates new tiles for empty cells when no released items are available", fun
 
 it("snaps active falls to their cells on layout changes and clears them on destruction", function fallLifecycle() {
     const { view, input } = createView(2, 1, [0, 1]);
-    view.removeTiles([1], 1);
-    view.fallTiles([], 0, [0, 2], [1], 1);
+    view.tileRenderer.removeTiles([1], 1);
+    view.tileRenderer.fallTiles([], 0, [0, 2], [1], 1);
     stepView(view, 0.5);
     view.tileSpacing.height = 2;
     stepView(view, 0.1);
@@ -243,8 +243,8 @@ it("snaps active falls to their cells on layout changes and clears them on destr
     assert.equal(input.enabled, false);
     stepView(view, 0.5);
     assert.equal(input.enabled, true);
-    view.removeTiles([1], 1);
-    view.fallTiles([], 0, [0, 1], [1], 1);
+    view.tileRenderer.removeTiles([1], 1);
+    view.tileRenderer.fallTiles([], 0, [0, 1], [1], 1);
     view.tileRenderer.onDestroy();
     assert.equal(view.tileRenderer.fallingCount, 0);
     assert.ok(view.tileRenderer.fallingStates.every(function empty(state) { return state.tile === null; }));
@@ -253,7 +253,7 @@ it("snaps active falls to their cells on layout changes and clears them on destr
 
 it("leaves input enabled for an empty fall", function emptyFall() {
     const { view, input } = createView(1, 1, [0]);
-    view.fallTiles([], 0, [0], [999], 0);
+    view.tileRenderer.fallTiles([], 0, [0], [999], 0);
     assert.equal(input.enabled, true);
     assert.equal(view.tileRenderer.fallingCount, 0);
 });
@@ -262,8 +262,8 @@ it("keeps a dense active prefix and reuses every state across turns", function r
     const { view, input } = createView(3, 2, [0, 0, 1, 2, 2, 1]);
     const buffer = view.tileRenderer.fallingStates;
     const originalStates = new Set(buffer);
-    view.removeTiles([0, 1, 3], 3);
-    view.fallTiles([{ from: 2, to: 0 }, { from: 4, to: 2 }, { from: 5, to: 1 }], 3,
+    view.tileRenderer.removeTiles([0, 1, 3], 3);
+    view.tileRenderer.fallTiles([{ from: 2, to: 0 }, { from: 4, to: 2 }, { from: 5, to: 1 }], 3,
         [1, 1, 2, 0, 1, 2], [3, 4, 5], 3);
     assert.equal(view.tileRenderer.fallingCount, 6);
 
@@ -289,8 +289,8 @@ it("keeps a dense active prefix and reuses every state across turns", function r
     assert.equal(input.enabled, true);
     assert.ok(buffer.every(function idle(state) { return state.tile === null; }));
 
-    view.removeTiles([4, 5], 2);
-    view.fallTiles([], 0, [1, 1, 2, 0, 2, 1], [4, 5], 2);
+    view.tileRenderer.removeTiles([4, 5], 2);
+    view.tileRenderer.fallTiles([], 0, [1, 1, 2, 0, 2, 1], [4, 5], 2);
     assert.equal(view.tileRenderer.fallingCount, 2);
     assert.equal(buffer[0].elapsed, 0);
     assert.equal(buffer[1].elapsed, 0);
@@ -309,8 +309,8 @@ it("keeps a dense active prefix and reuses every state across turns", function r
 it("updates animations in BoardTileRenderer independently of BoardView", function separateAnimationUpdate() {
     const { view, input } = createView(2, 1, [0, 1]);
     const renderer = view.tileRenderer;
-    view.removeTiles([1], 1);
-    view.fallTiles([], 0, [0, 2], [1], 1);
+    view.tileRenderer.removeTiles([1], 1);
+    view.tileRenderer.fallTiles([], 0, [0, 2], [1], 1);
     const fresh = renderer.tiles[1];
     assert.equal(fresh.node.y, 20);
     assert.equal(input.enabled, false);
@@ -333,20 +333,20 @@ it("changes the sprite in place and reuses the same common pool", function strat
     const created = pool.createdCount;
     const strategy = { spriteFrame: "row" };
     view.tileRenderer.superTiles = { getStrategy(value) { return value === 3 ? strategy : null; } };
-    view.transformTile(2, 3);
+    view.tileRenderer.transformTile(2, 3);
     assert.strictEqual(view.tileRenderer.tiles[2], tile);
     assert.equal(tile.frame, "row");
     assert.equal(pool.createdCount, created);
     assert.equal(released.length, 0);
-    view.removeTiles([0], 1);
+    view.tileRenderer.removeTiles([0], 1);
     stepView(view, 0.36);
-    view.fallTiles([{ from: 2, to: 0 }], 1, [0, 1, 2, 0], [2], 1);
+    view.tileRenderer.fallTiles([{ from: 2, to: 0 }], 1, [0, 1, 2, 0], [2], 1);
     stepView(view, 100);
     assert.strictEqual(view.tileRenderer.tiles[0], tile);
     assert.equal(tile.frame, "row");
-    view.removeTiles([0], 1);
+    view.tileRenderer.removeTiles([0], 1);
     stepView(view, 0.36);
-    view.fallTiles([], 0, [1, 1, 2, 0], [0], 1);
+    view.tileRenderer.fallTiles([], 0, [1, 1, 2, 0], [0], 1);
     assert.strictEqual(view.tileRenderer.tiles[0], tile);
     assert.equal(tile.frame, "blue");
     assert.equal(pool.createdCount, created);
@@ -359,13 +359,13 @@ it("delays particles, keeps shrinking tiles out of the pool and locks input unti
     const particleNodes = renderer.particlePool.items.slice();
     const states = renderer.removalStates;
     renderer.fallSpeed = 1000;
-    view.removeTiles([0], 1);
+    view.tileRenderer.removeTiles([0], 1);
     assert.equal(renderer.tiles[0], null);
     assert.equal(input.indices.get(removed.node), -1);
     assert.equal(input.enabled, false);
     assert.equal(released.length, 0);
     assert.equal(renderer.activeParticleCount, 0);
-    view.fallTiles([], 0, [1], [0], 1);
+    view.tileRenderer.fallTiles([], 0, [1], [0], 1);
     assert.notStrictEqual(renderer.tiles[0], removed);
     assert.equal(pool.createdCount, 2);
     stepView(view, 0.04);
@@ -421,7 +421,7 @@ function createPipeline(merge) {
             return 1;
         }
     };
-    const controller = new BoardController(model, fixture.view, null, spawn);
+    const controller = new BoardController(model, fixture.view.tileRenderer, null, spawn);
     controller.init();
     const result = {
         valid: true, removedIndices: [0], removedCount: 1,
@@ -440,8 +440,8 @@ it("awaits the complete merge before starting fall and resolves only after the l
     const turn = controller.applyTurnResult(result);
     assert.ok(source.node.zIndex > renderer.tiles[2].node.zIndex);
     assert.ok(source.node.zIndex > target.node.zIndex);
-    const mergeWait = view.waitForAnimations();
-    assert.strictEqual(view.waitForAnimations(), mergeWait);
+    const mergeWait = view.tileRenderer.waitForAnimations();
+    assert.strictEqual(view.tileRenderer.waitForAnimations(), mergeWait);
     stepView(view, 0.18);
     await Promise.resolve();
     assert.equal(source.node.scale, 1);

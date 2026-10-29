@@ -51,12 +51,12 @@ export class GameFactory {
         const spawnService = new SpawnService(config.colorCount);
         const definitions = BoosterFactory.createDefinitions(boosterPrefabs);
         const capacity = config.boardRows * config.boardColumns;
+        const tileRenderer = view.getComponent(BoardTileRenderer) || view.addComponent(BoardTileRenderer);
         const boosters = new BoosterController(definitions, new BoosterModel(definitions), model, engine,
-            view, boostersView, config.boardColumns, capacity);
-        const boardController = new BoardController(model, view, engine, spawnService);
+            tileRenderer, boostersView, config.boardColumns, capacity);
+        const boardController = new BoardController(model, tileRenderer, engine, spawnService);
         const gameController = new GameController(boardController, boosters, gameModel, session, gameView);
         const inputService = new BoardInputService(gameController);
-        const tileRenderer = view.getComponent(BoardTileRenderer) || view.addComponent(BoardTileRenderer);
         tileRenderer.init({
             tilePool,
             superTiles: superTiles.creation,
