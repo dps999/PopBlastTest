@@ -274,7 +274,7 @@
     "_srcBlendFactor": 770,
     "_dstBlendFactor": 771,
     "_spriteFrame": {
-      "__uuid__": "4397c50d-b706-4616-b2f6-4bccc8112c41"
+      "__uuid__": "644141b7-cdcd-4cb9-8b00-9cdf9f799b4f"
     },
     "_type": 1,
     "_sizeMode": 0,
@@ -395,7 +395,7 @@
     "_N$verticalAlign": 1,
     "_N$fontFamily": "Arial",
     "_N$overflow": 1,
-    "_N$cacheMode": 0,
+    "_N$cacheMode": 1,
     "_id": ""
   },
   {
@@ -425,7 +425,7 @@
     "_srcBlendFactor": 770,
     "_dstBlendFactor": 771,
     "_spriteFrame": {
-      "__uuid__": "a34eec31-1938-40f9-9fee-6171d58968eb"
+      "__uuid__": "a95c7e67-0581-437c-8d76-bc5ea50d163b"
     },
     "_type": 1,
     "_sizeMode": 0,

@@ -607,7 +607,7 @@
     "_N$verticalAlign": 1,
     "_N$fontFamily": "Marvin",
     "_N$overflow": 0,
-    "_N$cacheMode": 0,
+    "_N$cacheMode": 1,
     "_id": "8d5zjRf7ZCJJHe1qmUKXQE"
   },
   {
@@ -704,7 +704,7 @@
     "_N$verticalAlign": 1,
     "_N$fontFamily": "Marvin",
     "_N$overflow": 0,
-    "_N$cacheMode": 0,
+    "_N$cacheMode": 1,
     "_id": "1fmvS4AThImqhVKo8RTSfI"
   },
   {
@@ -929,7 +929,7 @@
     "_N$verticalAlign": 1,
     "_N$fontFamily": "Arial",
     "_N$overflow": 0,
-    "_N$cacheMode": 0,
+    "_N$cacheMode": 1,
     "_id": "d6gES+rnFOZ5w09Ot5VkZk"
   },
   {
@@ -1182,7 +1182,7 @@
     "_N$verticalAlign": 1,
     "_N$fontFamily": "Arial",
     "_N$overflow": 0,
-    "_N$cacheMode": 0,
+    "_N$cacheMode": 1,
     "_id": "5atKjfvWtOYbVtIkUa2idz"
   },
   {
@@ -1638,8 +1638,10 @@
     "_fontSize": 32,
     "_lineHeight": 36,
     "_enableWrapText": false,
-    "_N$file": null,
-    "_isSystemFontUsed": true,
+    "_N$file": {
+      "__uuid__": "25808d3c-e181-4d9d-901b-c29f603a67cb"
+    },
+    "_isSystemFontUsed": false,
     "_spacingX": 0,
     "_batchAsBitmap": false,
     "_styleFlags": 0,
@@ -1648,7 +1650,7 @@
     "_N$verticalAlign": 1,
     "_N$fontFamily": "Arial",
     "_N$overflow": 1,
-    "_N$cacheMode": 0,
+    "_N$cacheMode": 1,
     "_id": "26oOMtovREnKHqEZgw4uSR"
   },
   {
@@ -2172,8 +2174,10 @@
     "_fontSize": 32,
     "_lineHeight": 36,
     "_enableWrapText": false,
-    "_N$file": null,
-    "_isSystemFontUsed": true,
+    "_N$file": {
+      "__uuid__": "25808d3c-e181-4d9d-901b-c29f603a67cb"
+    },
+    "_isSystemFontUsed": false,
     "_spacingX": 0,
     "_batchAsBitmap": false,
     "_styleFlags": 0,
@@ -2182,7 +2186,7 @@
     "_N$verticalAlign": 1,
     "_N$fontFamily": "Arial",
     "_N$overflow": 1,
-    "_N$cacheMode": 0,
+    "_N$cacheMode": 1,
     "_id": "d354J0IJRCFYZkZcsL2nBp"
   },
   {
@@ -6984,6 +6988,7 @@
       "__uuid__": "8e542d19-2118-42e0-914b-3c6bc3315ac3"
     },
     "capacity": 16,
+    "bombOuterDelay": 0.25,
     "tileExplosionPrefab": {
       "__uuid__": "efa42659-2bf0-4354-8c59-f5797689691d"
     },
@@ -6995,9 +7000,7 @@
     "root": {
       "__id__": 165
     },
-    "asset": {
-      "__uuid__": "5f32081e-e12c-41b1-bf51-41a045f73220"
-    },
+    "asset": null,
     "fileId": "",
     "sync": false
   }

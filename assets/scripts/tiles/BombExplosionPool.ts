@@ -1,6 +1,7 @@
 interface ExplosionPoolState {
     available: cc.ParticleSystem[];
     active: cc.ParticleSystem[];
+    startDelays: number[];
     availableCount: number;
     activeCount: number;
     startColor: cc.Color;
@@ -17,6 +18,9 @@ export default class BombExplosionPool extends cc.Component {
 
     @property({ type: cc.Integer, min: 1 })
     private capacity: number = 16;
+
+    @property({ min: 0, tooltip: "Задержка запуска внешней частицы бомбы, в секундах." })
+    private bombOuterDelay: number = 0.8;
 
     @property(cc.Prefab)
     private tileExplosionPrefab: cc.Prefab = null;
@@ -43,6 +47,7 @@ export default class BombExplosionPool extends cc.Component {
         const pool: ExplosionPoolState = {
             available: new Array<cc.ParticleSystem>(capacity),
             active: new Array<cc.ParticleSystem>(capacity),
+            startDelays: new Array<number>(capacity),
             availableCount: 0,
             activeCount: 0,
             startColor: cc.color(255, 255, 255),
@@ -50,6 +55,7 @@ export default class BombExplosionPool extends cc.Component {
         };
         for (let i = 0; i < capacity; i++) {
             const node = cc.instantiate(prefab);
+            node.active = false;
             node.parent = this.node;
             node.zIndex = zIndex;
             const particles = node.getComponent(cc.ParticleSystem);
@@ -62,7 +68,7 @@ export default class BombExplosionPool extends cc.Component {
             }
             particles.playOnLoad = false;
             particles.autoRemoveOnFinish = false;
-            node.active = false;
+            this.configureNestedParticles(node);
             pool.available[pool.availableCount++] = particles;
         }
         return pool;
@@ -95,32 +101,99 @@ export default class BombExplosionPool extends cc.Component {
         particles.endColor = endColor;
         particles.node.setPosition(x, y);
         particles.node.active = true;
-        particles.resetSystem();
-        pool.active[pool.activeCount++] = particles;
+        this.restartNestedParticles(particles.node);
+        const delay = pool === this.bombs ? this.bombOuterDelay : 0;
+        const activeIndex = pool.activeCount;
+        pool.startDelays[activeIndex] = delay;
+        if (delay <= 0) {
+            particles.resetSystem();
+        }
+        pool.active[activeIndex] = particles;
+        pool.activeCount = activeIndex + 1;
         return true;
     }
 
-    protected update(): void {
-        this.updatePool(this.tiles);
-        this.updatePool(this.bombs);
+    protected update(dt: number): void {
+        this.updatePool(this.tiles, dt);
+        this.updatePool(this.bombs, dt);
     }
 
-    private updatePool(pool: ExplosionPoolState): void {
+    private updatePool(pool: ExplosionPoolState, dt: number): void {
         if (!pool) {
             return;
         }
         for (let i = 0; i < pool.activeCount;) {
             const particles = pool.active[i];
+            const delay = pool.startDelays[i];
+            if (delay > 0) {
+                const remainingDelay = delay - dt;
+                pool.startDelays[i] = remainingDelay > 0 ? remainingDelay : 0;
+                if (remainingDelay <= 0) {
+                    particles.resetSystem();
+                }
+                i++;
+                continue;
+            }
             if (!particles.stopped || particles.particleCount > 0) {
+                i++;
+                continue;
+            }
+            if (this.hasActiveNestedParticles(particles.node)) {
                 i++;
                 continue;
             }
             particles.node.active = false;
             pool.available[pool.availableCount++] = particles;
             const last = --pool.activeCount;
-            pool.active[i] = pool.active[last];
+            if (i !== last) {
+                pool.active[i] = pool.active[last];
+                pool.startDelays[i] = pool.startDelays[last];
+            }
             pool.active[last] = null;
+            pool.startDelays[last] = 0;
         }
+    }
+
+    private configureNestedParticles(node: cc.Node): void {
+        for (let i = 0; i < node.childrenCount; i++) {
+            const child = node.children[i];
+            const particles = child.getComponent(cc.ParticleSystem);
+            if (particles) {
+                particles.playOnLoad = false;
+                particles.autoRemoveOnFinish = false;
+            }
+            this.configureNestedParticles(child);
+        }
+    }
+
+    private restartNestedParticles(node: cc.Node): void {
+        for (let i = 0; i < node.childrenCount; i++) {
+            const child = node.children[i];
+            if (child.active) {
+                const particles = child.getComponent(cc.ParticleSystem);
+                if (particles) {
+                    particles.resetSystem();
+                }
+                this.restartNestedParticles(child);
+            }
+        }
+    }
+
+    private hasActiveNestedParticles(node: cc.Node): boolean {
+        for (let i = 0; i < node.childrenCount; i++) {
+            const child = node.children[i];
+            if (!child.active) {
+                continue;
+            }
+            const particles = child.getComponent(cc.ParticleSystem);
+            if (particles && (!particles.stopped || particles.particleCount > 0)) {
+                return true;
+            }
+            if (this.hasActiveNestedParticles(child)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     protected onDestroy(): void {
