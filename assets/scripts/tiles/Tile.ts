@@ -5,8 +5,18 @@ export default class Tile extends cc.Component {
     @property(cc.Sprite)
     public sprite: cc.Sprite = null;
 
-    public setSprite(spriteFrame: cc.SpriteFrame): void {
+    @property(cc.Prefab)
+    public defaultDestructionParticles: cc.Prefab = null;
+
+    private strategyDestructionParticles: cc.Prefab = null;
+
+    public get destructionParticles(): cc.Prefab {
+        return this.strategyDestructionParticles || this.defaultDestructionParticles;
+    }
+
+    public setSprite(spriteFrame: cc.SpriteFrame, destructionParticles: cc.Prefab = null): void {
         this.sprite.spriteFrame = spriteFrame;
+        this.strategyDestructionParticles = destructionParticles;
     }
 
     public setSize(size: cc.Size): void {

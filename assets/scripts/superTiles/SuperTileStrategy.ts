@@ -12,6 +12,9 @@ export default abstract class SuperTileStrategy extends cc.Component implements 
     @property(cc.SpriteFrame)
     public spriteFrame: cc.SpriteFrame = null;
 
+    @property(cc.Prefab)
+    public destructionParticles: cc.Prefab = null;
+
     public validate(): void {
         if (!this.spriteFrame) {
             throw new Error("Strategy requires a sprite frame.");

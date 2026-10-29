@@ -5,8 +5,11 @@ Tests use Node.js's built-in test runner and TypeScript type stripping; there ar
 `BombExplosionPool.test.mjs` checks both local pools' prewarming, exhaustion,
 node/component/color reuse, particle lifetime, independent return and cleanup. Run it with
 `node --test tests/BombExplosionPool.test.mjs` (Node.js 22.18+, no extra dependencies).
-The pool owns both TileExplosion and BombExplosion; BoardTileRenderer only calls
-playTile with a position and color and waits for isPlaying to become false.
+The pool owns both TileExplosion and BombExplosion. Add its node to the scene
+manually and assign the component to GameBootstrap.explosionPool. BoardTileRenderer
+calls play(prefab, x, y, color) and waits for isPlaying; it does not instantiate
+or destroy the pool container. Tile.defaultDestructionParticles supplies the normal
+effect; strategy destructionParticles overrides it and resets on pooled tile reuse.
 Cleanup checks cover Cocos destroying child components before the pool component,
 nodes already queued for destruction and repeated cleanup.
 

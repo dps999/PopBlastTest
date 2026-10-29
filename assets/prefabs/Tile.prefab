@@ -195,6 +195,9 @@
     "sprite": {
       "__id__": 3
     },
+    "defaultDestructionParticles": {
+      "__uuid__": "efa42659-2bf0-4354-8c59-f5797689691d"
+    },
     "_id": ""
   },
   {

@@ -13,7 +13,6 @@ export interface BoardTileRendererDependencies {
     colorSprites: cc.SpriteFrame[];
     config: GameConfig;
     inputService: BoardInputService;
-    tileRemovalParticlePrefab: cc.Prefab;
 }
 
 interface TileRemovalState {
@@ -72,7 +71,6 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
     private shuffleTilesBuffer: Tile[] = [];
     private removalStates: TileRemovalState[] = [];
     private removalCount: number = 0;
-    private explosionPool: BombExplosionPool;
     private readonly particleColorsBySprite: Map<cc.SpriteFrame, cc.Color> = new Map<cc.SpriteFrame, cc.Color>();
     private columnSpawnCounts: number[] = [];
     private selectedIndex: number = -1;
@@ -152,9 +150,6 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
         this.colorSprites = dependencies.colorSprites;
         this.config = dependencies.config;
         this.inputService = dependencies.inputService;
-        if (!dependencies.tileRemovalParticlePrefab) {
-            throw new Error("BoardTileRenderer requires an explosion pool prefab.");
-        }
         if (!this.config.particleColors || this.config.particleColors.length !== this.colorSprites.length) {
             throw new Error("Particle colors must match colorSprites in count and order.");
         }
@@ -199,19 +194,21 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
                 targetTile: null
             };
         }
-        const node = cc.instantiate(dependencies.tileRemovalParticlePrefab);
-        this.explosionPool = node.getComponent(BombExplosionPool);
-        if (!this.explosionPool) {
-            node.destroy();
-            throw new Error("Explosion pool prefab must contain BombExplosionPool.");
-        }
-        this.explosionPool.tileCapacity = cellCount;
-        node.parent = this.node;
         this.columnSpawnCounts = new Array<number>(this.config.boardColumns).fill(0);
     }
 
     public setLayout(initialPoint: cc.Node, tileSize: cc.Size, tileSpacing: cc.Size): void {
         this.initialPoint = initialPoint;
+        this.explosionPool = this.initialPoint.getComponent(BombExplosionPool)
+            || this.initialPoint.getComponentInChildren(BombExplosionPool);
+        if (!this.explosionPool) {
+            const scene = cc.director.getScene();
+            this.explosionPool = scene && scene !== this.initialPoint.parent
+                ? scene.getComponentInChildren(BombExplosionPool) : null;
+        }
+        if (!this.explosionPool) {
+            throw new Error("Add BombExplosionPool to the scene or board InitialPoint.");
+        }
         this.explosionPool.node.parent = initialPoint;
         this.explosionPool.node.zIndex = this.tiles.length * 2;
         this.tileSize = tileSize;
@@ -230,7 +227,7 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
 
     public transformTile(index: number, value: number): void {
         const tile = this.tiles[index];
-        tile.setSprite(this.getSprite(value));
+        this.setTileSprite(tile, value);
         tile.setSize(this.tileSize);
     }
 
@@ -281,7 +278,8 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
     }
 
     private spawnParticles(tile: Tile): void {
-        this.explosionPool.playTile(tile.node.x, tile.node.y, this.particleColorsBySprite.get(tile.sprite.spriteFrame));
+        this.explosionPool.play(tile.destructionParticles, tile.node.x, tile.node.y,
+            this.particleColorsBySprite.get(tile.sprite.spriteFrame));
     }
 
     public fallTiles(
@@ -361,16 +359,17 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
 
     private spawnTile(index: number, value: number): Tile {
         const tile = this.tilePool.get();
-        tile.setSprite(this.getSprite(value));
+        this.setTileSprite(tile, value);
         this.layoutTile(tile, index);
         this.tiles[index] = tile;
         this.inputService.bind(tile.sprite.node, index);
         return tile;
     }
 
-    private getSprite(value: number): cc.SpriteFrame {
+    private setTileSprite(tile: Tile, value: number): void {
         const strategy = this.superTiles ? this.superTiles.getStrategy(value) : null;
-        return strategy ? strategy.spriteFrame : this.colorSprites[value];
+        tile.setSprite(strategy ? strategy.spriteFrame : this.colorSprites[value],
+            strategy ? strategy.destructionParticles : null);
     }
 
     private startFalling(tile: Tile, index: number): void {
@@ -546,9 +545,6 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
         this.stopShuffling();
         if (this.inputService) {
             this.inputService.dispose();
-        }
-        if (cc.isValid(this.explosionPool, true) && cc.isValid(this.explosionPool.node, true)) {
-            this.explosionPool.node.destroy();
         }
         this.explosionPool = null;
         this.particleColorsBySprite.clear();

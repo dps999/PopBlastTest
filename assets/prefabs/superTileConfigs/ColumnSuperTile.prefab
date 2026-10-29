@@ -83,6 +83,9 @@
     "_enabled": true,
     "minimumGroupSize": 5,
     "_id": "",
+    "destructionParticles": {
+      "__uuid__": "efa42659-2bf0-4354-8c59-f5797689691d"
+    },
     "spriteFrame": {
       "__uuid__": "6835de1f-fbfe-42d3-8f6e-7f99988347bd"
     }

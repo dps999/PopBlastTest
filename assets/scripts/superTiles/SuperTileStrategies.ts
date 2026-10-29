@@ -7,6 +7,7 @@ export interface EffectContext {
 export interface ISuperTileEffectStrategy {
     readonly minimumGroupSize: number;
     readonly spriteFrame: cc.SpriteFrame;
+    readonly destructionParticles?: cc.Prefab;
     collectTargets(originIndex: number, context: EffectContext, targets: number[]): number;
 }
 

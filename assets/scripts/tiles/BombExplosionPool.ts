@@ -69,12 +69,10 @@ export default class BombExplosionPool extends cc.Component {
     }
 
     /** Координаты относительно узла пула. false — все эффекты заняты. */
-    public play(x: number, y: number): boolean {
-        return this.playFrom(this.bombs, x, y, null);
-    }
-
-    public playTile(x: number, y: number, color: cc.Color = null): boolean {
-        return this.playFrom(this.tiles, x, y, color);
+    public play(prefab: cc.Prefab, x: number, y: number, color: cc.Color = null): boolean {
+        const pool = prefab === this.tileExplosionPrefab ? this.tiles
+            : prefab === this.explosionPrefab ? this.bombs : null;
+        return this.playFrom(pool, x, y, color);
     }
 
     private playFrom(pool: ExplosionPoolState, x: number, y: number, color: cc.Color): boolean {

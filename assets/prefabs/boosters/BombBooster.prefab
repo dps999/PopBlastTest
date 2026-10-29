@@ -99,6 +99,9 @@
     },
     "_enabled": true,
     "_id": "",
+    "destructionParticles": {
+      "__uuid__": "8e542d19-2118-42e0-914b-3c6bc3315ac3"
+    },
     "radius": 1
   },
   {

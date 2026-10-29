@@ -30,7 +30,9 @@ class TileStub {
     sprite = { node: this.node, spriteFrame: null };
     frame = null;
     size = null;
-    setSprite(frame) { this.frame = frame; this.sprite.spriteFrame = frame; }
+    effect = null;
+    get destructionParticles() { return this.effect || particlePrefab; }
+    setSprite(frame, effect = null) { this.frame = frame; this.sprite.spriteFrame = frame; this.effect = effect; }
     setSize(size) { this.size = size; }
 }
 
@@ -52,19 +54,20 @@ class ParticleStub {
 function particlesOf() { return this.particles; }
 
 const particlePrefab = { instantiate() { return new ParticleStub().node; } };
+const bombParticlePrefab = { instantiate() { return new ParticleStub().node; } };
 
-function poolComponent() { return this.pool; }
-function destroyExplosionPool() { this.pool.onDestroy(); }
+function destroyExplosionPool() { this.destroyed = true; this.pool.onDestroy(); }
+function getExplosionPool() { return this.explosionPool; }
 function particleNode(particles) { return particles.node; }
-function instantiateExplosionPool() {
+function createExplosionPool(tileCapacity) {
     const pool = new BombExplosionPool();
-    pool.node = { parent: null, zIndex: 0, pool, getComponent: poolComponent, destroy: destroyExplosionPool };
-    pool.explosionPrefab = particlePrefab;
+    pool.node = { parent: null, zIndex: 0, pool, destroy: destroyExplosionPool };
+    pool.explosionPrefab = bombParticlePrefab;
     pool.tileExplosionPrefab = particlePrefab;
     pool.capacity = 1;
-    pool.tileCapacity = this.tileCapacity;
+    pool.tileCapacity = tileCapacity;
     pool.onLoad();
-    return pool.node;
+    return pool;
 }
 
 
@@ -95,7 +98,8 @@ function createView(rows, columns, cells, initialize = true) {
     view.getTileSizeFromBackground = function testTileSize() { return { width: 10, height: 10 }; };
     view.alignInitialPointToBackground = function testAlignment() {};
     view.tileSpacing = { width: 0, height: 0 };
-    view.initialPoint = { childrenCount: rows * columns };
+    const explosionPool = createExplosionPool(rows * columns);
+    view.initialPoint = { childrenCount: rows * columns, explosionPool, getComponent: getExplosionPool };
     const config = { boardRows: rows, boardColumns: columns, particleColors: [
         { r: 245, g: 60, b: 60, a: 123 },
         { r: 55, g: 145, b: 255, a: 124 },
@@ -104,12 +108,42 @@ function createView(rows, columns, cells, initialize = true) {
     const colorSprites = ["red", "blue", "green"];
     const tileRenderer = new BoardTileRenderer();
     tileRenderer.fallSpeed = 10;
-    const explosionPoolPrefab = { tileCapacity: rows * columns, instantiate: instantiateExplosionPool };
-    tileRenderer.init({ tilePool: pool, colorSprites, config, inputService: input, tileRemovalParticlePrefab: explosionPoolPrefab });
+    tileRenderer.init({ tilePool: pool, colorSprites, config, inputService: input });
     view.init({ tileRenderer, colorSprites, config });
     if (initialize) { view.tileRenderer.initRender(cells); }
     return { view, input, released, pool };
 }
+
+it("uses an existing scene pool without instantiating or destroying its container", function manualPool(t) {
+    const instantiate = t.mock.method(cc, "instantiate");
+    const { view } = createView(2, 2, [0, 1, 2, 0]);
+    const pool = view.tileRenderer.explosionPool;
+    assert.equal(instantiate.mock.calls.length, 5); // Только прогрев: 4 обычных эффекта и 1 большой.
+    view.tileRenderer.onDestroy();
+    assert.notEqual(pool.node.destroyed, true);
+    assert.equal(pool.play(pool.tileExplosionPrefab, 0, 0), true);
+    pool.onDestroy();
+});
+
+function bombVisualStrategy(value) { return value === 3 ? this.strategy : null; }
+
+it("selects destruction particles from the super tile strategy and restores the normal default", function strategyParticles() {
+    const { view } = createView(1, 1, [0]);
+    const renderer = view.tileRenderer;
+    const pool = renderer.explosionPool;
+    renderer.superTiles = { strategy: { spriteFrame: "bomb", destructionParticles: pool.explosionPrefab },
+        getStrategy: bombVisualStrategy };
+    renderer.transformTile(0, 3);
+    renderer.spawnParticles(renderer.tiles[0]);
+    assert.equal(pool.bombs.activeCount, 1);
+    assert.equal(pool.tiles.activeCount, 0);
+    pool.bombs.active[0].stopped = true;
+    pool.update();
+    renderer.transformTile(0, 1);
+    renderer.spawnParticles(renderer.tiles[0]);
+    assert.equal(pool.bombs.activeCount, 0);
+    assert.equal(pool.tiles.activeCount, 1);
+});
 
 it("vertical teleport preserves row draw order, node identity, tint and input indices", function teleportRendering() {
     const { view, input, released, pool } = createView(3, 2, [0, 1, 2, 0, 1, 2]);
