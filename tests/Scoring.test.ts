@@ -337,6 +337,7 @@ it("renders result values and closing the popup keeps the session terminal", asy
     const score = new ScoreLabel();
     const moves = new ScoreLabel();
     Reflect.set(popup, "node", { active: false });
+    Reflect.set(popup, "getComponent", noPopupAnimation);
     Reflect.set(popup, "scoreLabel", score);
     Reflect.set(popup, "movesLabel", moves);
     Reflect.set(fixture.gameView, "wonPopup", popup);
@@ -352,3 +353,7 @@ it("renders result values and closing the popup keeps the session terminal", asy
     assert.equal(popup.node.active, false);
     assert.equal(fixture.gameModel.getMovesLeft(), 0);
 });
+
+function noPopupAnimation(): null {
+    return null;
+}

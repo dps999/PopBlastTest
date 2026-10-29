@@ -16,6 +16,11 @@ export default class GameOverPopupView extends cc.Component {
         this.scoreLabel.string = score.toString() + "/" + targetScore.toString();
         this.movesLabel.string = moves.toString();
         this.node.active = true;
+        const animation = this.getComponent(cc.Animation);
+        if (animation && animation.defaultClip) {
+            animation.play(animation.defaultClip.name, 0);
+            animation.sample(animation.defaultClip.name);
+        }
     }
 
     public hide(): void {

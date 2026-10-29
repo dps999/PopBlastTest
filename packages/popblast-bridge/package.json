@@ -1,0 +1,7 @@
+{
+    "name": "popblast-bridge",
+    "version": "1.0.0",
+    "description": "Local HTTP bridge for Cocos Creator 2.4 scene operations",
+    "main": "main.js",
+    "scene-script": "scene-script.js"
+}
