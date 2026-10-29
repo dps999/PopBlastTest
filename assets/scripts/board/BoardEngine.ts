@@ -1,5 +1,6 @@
 import type { CellMove, IBoardEngine, ShuffleResult, TurnResult } from "./IBoardEngine";
 import type { ISuperTileCreationStrategy } from "../superTiles/SuperTileStrategies";
+import { BoardEffectType } from "../core/BoardEffectType";
 import type { EffectContext } from "../superTiles/SuperTileStrategies";
 import type { IBoardModel } from "./IBoardModel";
 
@@ -40,7 +41,9 @@ export class BoardEngine implements IBoardEngine {
         this.result = {
             valid: false, removedIndices: this.matches, matchCount: 0, removedCount: 0,
             transformedIndex: -1, transformedValue: -1, swappedFirstIndex: -1, swappedSecondIndex: -1,
-            preRemovalEffectIndex: -1, moves: this.moves, moveCount: 0
+            effectIndices: new Array<number>(capacity + 1).fill(-1),
+            effectTypes: new Array<BoardEffectType>(capacity + 1).fill(BoardEffectType.None), effectCount: 0,
+            moves: this.moves, moveCount: 0
         };
     }
 
@@ -173,7 +176,7 @@ export class BoardEngine implements IBoardEngine {
         result.transformedValue = -1;
         result.swappedFirstIndex = -1;
         result.swappedSecondIndex = -1;
-        result.preRemovalEffectIndex = -1;
+        result.effectCount = 0;
         return result;
     }
 
@@ -203,6 +206,11 @@ export class BoardEngine implements IBoardEngine {
             const effect = this.creation.getStrategy(cells[origin]);
             if (!effect) {
                 throw new Error("Unregistered super tile effect.");
+            }
+            if (effect.activationEffectType !== BoardEffectType.None) {
+                const effectIndex = this.result.effectCount++;
+                this.result.effectIndices[effectIndex] = origin;
+                this.result.effectTypes[effectIndex] = effect.activationEffectType;
             }
             const targetCount = effect.collectTargets(origin, this.context, this.targets);
             for (let i = 0; i < targetCount; i++) {

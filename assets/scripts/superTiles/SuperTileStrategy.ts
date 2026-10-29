@@ -1,3 +1,4 @@
+import { BoardEffectType } from "../core/BoardEffectType";
 import type { EffectContext, ISuperTileEffectStrategy } from "./SuperTileStrategies";
 
 const { ccclass, property, disallowMultiple } = cc._decorator;
@@ -14,6 +15,11 @@ export default abstract class SuperTileStrategy extends cc.Component implements 
 
     @property(cc.Prefab)
     public destructionParticles: cc.Prefab = null;
+
+    @property(cc.Prefab)
+    public activationEffectPrefab: cc.Prefab = null;
+
+    public readonly activationEffectType: BoardEffectType = BoardEffectType.None;
 
     public validate(): void {
         if (!this.spriteFrame) {

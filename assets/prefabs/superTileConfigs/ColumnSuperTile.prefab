@@ -86,6 +86,9 @@
     "destructionParticles": {
       "__uuid__": "efa42659-2bf0-4354-8c59-f5797689691d"
     },
+    "activationEffectPrefab": {
+      "__uuid__": "7e2aad11-82eb-4a87-990d-37c805ba7cd4"
+    },
     "spriteFrame": {
       "__uuid__": "6835de1f-fbfe-42d3-8f6e-7f99988347bd"
     }

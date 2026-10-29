@@ -1,4 +1,5 @@
 import type { CellMove } from "./IBoardEngine";
+import type { BoardEffectType } from "../core/BoardEffectType";
 
 export interface IBoardView {
     initRender(cells: number[]): void;
@@ -7,7 +8,7 @@ export interface IBoardView {
 
     removeTiles(indices: number[], count: number): void;
 
-    playBombEffect(index: number): boolean;
+    playEffects(indices: number[], effectTypes: BoardEffectType[], count: number): boolean;
 
     mergeTiles(indices: number[], count: number, targetIndex: number): void;
 

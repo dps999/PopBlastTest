@@ -1,4 +1,5 @@
 import type { TurnResult } from "../board/IBoardEngine";
+import { BoardEffectType } from "../core/BoardEffectType";
 import type { IBoosterBoardActions, BoosterContext } from "./BoosterContracts";
 import BoosterEffectStrategy from "./BoosterEffectStrategy";
 
@@ -33,7 +34,9 @@ export default class BombBoosterStrategy extends BoosterEffectStrategy {
         }
         const result = board.processRemoval(context.targets, count);
         if (result.valid) {
-            result.preRemovalEffectIndex = selected[0];
+            const effectIndex = result.effectCount++;
+            result.effectIndices[effectIndex] = selected[0];
+            result.effectTypes[effectIndex] = BoardEffectType.Bomb;
         }
         return result;
     }

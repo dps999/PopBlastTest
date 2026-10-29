@@ -1,3 +1,5 @@
+import type { BoardEffectType } from "../core/BoardEffectType";
+
 export interface CellMove {
     from: number;
     to: number;
@@ -17,8 +19,10 @@ export interface TurnResult {
     /** Индексы обмена, -1 при отсутствии обмена. */
     swappedFirstIndex: number;
     swappedSecondIndex: number;
-    /** Клетка для эффекта перед удалением; -1, если предварительный эффект не нужен. */
-    preRemovalEffectIndex: number;
+    /** Индексы и типы всех эффектов до удаления; читать первые effectCount записей. */
+    effectIndices: number[];
+    effectTypes: BoardEffectType[];
+    effectCount: number;
     /** Фиксированный массив; читать первые moveCount записей до следующей операции. */
     moves: CellMove[];
     moveCount: number;

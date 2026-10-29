@@ -6,6 +6,9 @@ import type { BoardInputService } from "./BoardInputService";
 import type { CellMove } from "./IBoardEngine";
 import type { IBoardView } from "./IBoardView";
 import type BombExplosionPool from "../tiles/BombExplosionPool";
+import { BoardEffectType } from "../core/BoardEffectType";
+import { BoardEffectAnimationDispatcher, RocketEffectPool } from "./BoardEffectAnimationDispatcher";
+import type { IBoardEffectAnimationContext } from "./BoardEffectAnimationDispatcher";
 
 export interface BoardTileRendererDependencies {
     tilePool: TilePool;
@@ -19,6 +22,7 @@ interface TileRemovalState {
     tile: Tile;
     elapsed: number;
     startScale: number;
+    startOpacity: number;
     particlesStarted: boolean;
     startX: number;
     startY: number;
@@ -38,7 +42,7 @@ const { ccclass, property, disallowMultiple } = cc._decorator;
 
 @ccclass
 @disallowMultiple
-export default class BoardTileRenderer extends cc.Component implements IBoardView {
+export default class BoardTileRenderer extends cc.Component implements IBoardView, IBoardEffectAnimationContext {
     @property({ min: 1, tooltip: "Ускорение падения в локальных единицах поля в секунду в квадрате." })
     private fallAcceleration: number = 16000;
 
@@ -53,6 +57,9 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
     private colorSprites: cc.SpriteFrame[];
     private config: GameConfig;
     private inputService: BoardInputService;
+    private explosionPool: BombExplosionPool;
+    private rocketEffects: RocketEffectPool;
+    private readonly effectDispatcher: BoardEffectAnimationDispatcher = new BoardEffectAnimationDispatcher();
     private initialPoint: cc.Node;
     private tileSize: cc.Size;
     private columnStep: number = 0;
@@ -202,6 +209,7 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
                 tile: null,
                 elapsed: 0,
                 startScale: 1,
+                startOpacity: 255,
                 particlesStarted: false,
                 startX: 0,
                 startY: 0,
@@ -228,6 +236,13 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
         this.tileSize = tileSize;
         this.columnStep = tileSize.width + tileSpacing.width;
         this.rowStep = tileSize.height + tileSpacing.height;
+        const rocketPrefab = this.superTiles ? this.superTiles.getActivationEffectPrefab() : null;
+        if (rocketPrefab && !this.rocketEffects) {
+            this.rocketEffects = new RocketEffectPool(rocketPrefab, initialPoint, this.tiles.length,
+                tileSize, this.tiles.length * 2 + 1);
+        } else if (this.rocketEffects) {
+            this.rocketEffects.setParent(initialPoint, this.tiles.length * 2 + 1);
+        }
         this.refreshTilesLayout();
     }
 
@@ -257,6 +272,37 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
             return false;
         }
         return this.explosionPool.playBomb(tile.node.x, tile.node.y);
+    }
+
+    public playEffects(indices: number[], effectTypes: BoardEffectType[], count: number): boolean {
+        return this.effectDispatcher.play(indices, effectTypes, count, this);
+    }
+
+    public playRocketEffect(index: number, effectType: BoardEffectType): boolean {
+        const tile = this.tiles[index];
+        if (!tile || !this.rocketEffects) {
+            return false;
+        }
+
+        if (effectType === BoardEffectType.HorizontalRocket) {
+            const endX = (this.config.boardColumns - 1) * this.columnStep;
+            const started = this.rocketEffects.play(tile.node.x, tile.node.y,
+                0, tile.node.y, endX, tile.node.y, true);
+            if (started) {
+                tile.node.opacity = 0;
+            }
+            return started;
+        }
+        if (effectType === BoardEffectType.VerticalRocket) {
+            const endY = (this.config.boardRows - 1) * this.rowStep;
+            const started = this.rocketEffects.play(tile.node.x, tile.node.y,
+                tile.node.x, 0, tile.node.x, endY, false);
+            if (started) {
+                tile.node.opacity = 0;
+            }
+            return started;
+        }
+        return false;
     }
 
     public mergeTiles(indices: number[], count: number, targetIndex: number): void {
@@ -289,6 +335,7 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
         state.tile = tile;
         state.elapsed = 0;
         state.startScale = tile.node.scale;
+        state.startOpacity = tile.node.opacity;
         state.startX = tile.node.x;
         state.startY = tile.node.y;
         state.targetTile = targetTile;
@@ -407,6 +454,9 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
     }
 
     protected update(deltaTime: number): void {
+        if (this.rocketEffects) {
+            this.rocketEffects.update(deltaTime);
+        }
         for (let i = 0; i < this.fallingCount;) {
             const state = this.fallingStates[i];
             const tile = state.tile;
@@ -471,10 +521,10 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
                 const targetNode = state.targetTile.node;
                 tile.node.x = state.startX + (targetNode.x - state.startX) * progress;
                 tile.node.y = state.startY + (targetNode.y - state.startY) * progress;
-                tile.node.opacity = 255 * Math.min(1, (1 - progress) * 4);
+                tile.node.opacity = state.startOpacity * Math.min(1, (1 - progress) * 4);
             } else {
                 tile.node.scale = state.startScale * (1 - progress);
-                tile.node.opacity = 255 * (1 - progress);
+                tile.node.opacity = state.startOpacity * (1 - progress);
             }
             if (!state.particlesStarted && elapsed >= this.particleStartDelay) {
                 this.spawnParticles(tile);
@@ -556,7 +606,8 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
 
     private hasAnimations(): boolean {
         return this.fallingCount > 0 || this.shuffleCount > 0 || this.removalCount > 0
-            || this.mergeTargetTile !== null || (this.explosionPool && this.explosionPool.isPlaying);
+            || this.mergeTargetTile !== null || (this.explosionPool && this.explosionPool.isPlaying)
+            || (this.rocketEffects && this.rocketEffects.isPlaying);
     }
 
     protected onDestroy(): void {
@@ -569,6 +620,10 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
             this.inputService.dispose();
         }
         this.explosionPool = null;
+        if (this.rocketEffects) {
+            this.rocketEffects.dispose();
+            this.rocketEffects = null;
+        }
         this.particleColorsBySprite.clear();
     }
 }

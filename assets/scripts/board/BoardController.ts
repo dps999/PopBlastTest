@@ -68,7 +68,8 @@ export class BoardController implements IBoardController {
                 return await this.view.waitForAnimations();
             }
 
-            if (result.preRemovalEffectIndex >= 0 && this.view.playBombEffect(result.preRemovalEffectIndex)
+            if (result.effectCount > 0
+                && this.view.playEffects(result.effectIndices, result.effectTypes, result.effectCount)
                 && !await this.view.waitForAnimations()) {
                 return false;
             }

@@ -1,3 +1,5 @@
+import { BoardEffectType } from "../core/BoardEffectType";
+
 export interface EffectContext {
     columns: number;
     capacity: number;
@@ -8,6 +10,8 @@ export interface ISuperTileEffectStrategy {
     readonly minimumGroupSize: number;
     readonly spriteFrame: cc.SpriteFrame;
     readonly destructionParticles?: cc.Prefab;
+    readonly activationEffectType: BoardEffectType;
+    readonly activationEffectPrefab: cc.Prefab;
     collectTargets(originIndex: number, context: EffectContext, targets: number[]): number;
 }
 
@@ -15,20 +19,33 @@ export interface ISuperTileCreationStrategy {
     readonly colorCount: number;
     selectTile(groupSize: number): number;
     getStrategy(tileValue: number): ISuperTileEffectStrategy;
+    getActivationEffectPrefab(): cc.Prefab;
 }
 
 export class ThresholdCreationStrategy implements ISuperTileCreationStrategy {
     public readonly colorCount: number;
     private readonly strategies: ISuperTileEffectStrategy[];
+    private readonly activationEffectPrefab: cc.Prefab;
 
     constructor(strategies: ISuperTileEffectStrategy[], colorCount: number) {
         this.colorCount = colorCount;
         this.strategies = strategies.slice();
+        let activationEffectPrefab: cc.Prefab = null;
         for (let i = 0; i < strategies.length; i++) {
             if (!Number.isInteger(strategies[i].minimumGroupSize) || strategies[i].minimumGroupSize < 2) {
                 throw new Error("Super tile minimum group size must be an integer >= 2.");
             }
+            if (strategies[i].activationEffectType !== BoardEffectType.None) {
+                if (!strategies[i].activationEffectPrefab) {
+                    throw new Error("Animated super tiles require an activation effect prefab.");
+                }
+                if (activationEffectPrefab && activationEffectPrefab !== strategies[i].activationEffectPrefab) {
+                    throw new Error("Animated super tiles must share one activation effect prefab.");
+                }
+                activationEffectPrefab = strategies[i].activationEffectPrefab;
+            }
         }
+        this.activationEffectPrefab = activationEffectPrefab;
     }
 
     /** Максимальный подходящий порог; равные варианты выбираются равновероятно. */
@@ -63,5 +80,9 @@ export class ThresholdCreationStrategy implements ISuperTileCreationStrategy {
 
     public getStrategy(tileValue: number): ISuperTileEffectStrategy {
         return this.strategies[tileValue - this.colorCount] || null;
+    }
+
+    public getActivationEffectPrefab(): cc.Prefab {
+        return this.activationEffectPrefab;
     }
 }
