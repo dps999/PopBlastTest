@@ -18,7 +18,7 @@ export default class BoardView extends cc.Component {
     @property({ type: cc.Node, tooltip: "Центр нижнего левого тайла (ряд 0, столбец 0)." })
     private initialPoint: cc.Node = null;
 
-    @property({ tooltip: "Отступ в масштабе исходного тайла; по Y отрицательное значение не перекрывает грани." })
+    @property({ tooltip: "Отступ в масштабе исходного тайла; отрицательное значение сближает тайлы." })
     private tileSpacing: cc.Size = cc.size(4, 0);
 
     @property({ min: 1, max: 1.25, tooltip: "Насколько клетки заполняют внутреннюю область рамки." })
@@ -45,12 +45,12 @@ export default class BoardView extends cc.Component {
         const fieldWidth = backgroundNode.width - spriteFrame.insetLeft - spriteFrame.insetRight;
         const fieldHeight = backgroundNode.height - spriteFrame.insetTop - spriteFrame.insetBottom;
         const originalTileSize = this.colorSprites[0].getOriginalSize();
-        const verticalFaceSpacing = Math.max(0, this.tileSpacing.height);
+        const verticalSpacing = this.tileSpacing.height;
         const availableWidth = fieldWidth * backgroundNode.scaleX / this.initialPoint.scaleX;
         const availableHeight = fieldHeight * backgroundNode.scaleY / this.initialPoint.scaleY;
         const tileColumnStepSize = originalTileSize.width + this.tileSpacing.width;
         const tileRowStepSize = originalTileSize.height
-            + verticalFaceSpacing - originalTileSize.height * TILE_TOP_FACE_HEIGHT_RATIO;
+            + verticalSpacing - originalTileSize.height * TILE_TOP_FACE_HEIGHT_RATIO;
         const gridWidth = originalTileSize.width
             + tileColumnStepSize * (this.config.boardColumns - 1);
         const gridHeight = originalTileSize.height
@@ -63,7 +63,7 @@ export default class BoardView extends cc.Component {
         this.tileSize.width = originalTileSize.width * tileScale;
         this.tileSize.height = originalTileSize.height * tileScale;
         this.effectiveTileSpacing.width = this.tileSpacing.width * tileScale;
-        this.effectiveTileSpacing.height = (verticalFaceSpacing
+        this.effectiveTileSpacing.height = (verticalSpacing
             - originalTileSize.height * TILE_TOP_FACE_HEIGHT_RATIO) * tileScale;
     }
 

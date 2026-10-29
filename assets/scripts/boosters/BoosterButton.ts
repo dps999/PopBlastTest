@@ -26,8 +26,20 @@ export default class BoosterButton extends cc.Component {
         this.dispose();
         this.listener = listener;
         this.index = index;
+        if (!this.icon) {
+            this.icon = this.findIconSprite();
+        }
+        if (!this.icon) {
+            throw new Error("BoosterButton requires an Icon or icon_booster_bomb child with a Sprite component.");
+        }
         this.icon.spriteFrame = icon;
         this.node.on("click", this.onClick, this);
+    }
+
+    private findIconSprite(): cc.Sprite {
+        const iconNode = this.node.getChildByName("Icon")
+            || this.node.getChildByName("icon_booster_bomb");
+        return iconNode ? iconNode.getComponent(cc.Sprite) : null;
     }
 
     public moveQuantityLabelToLayer(layer: cc.Node): void {
