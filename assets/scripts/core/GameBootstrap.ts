@@ -49,7 +49,7 @@ export default class GameBootstrap extends cc.Component {
     }
 
     protected start(): void {
-        GameFactory.createBoard(this.boardView, this.tilePrefab, this.tileRemovalParticlePrefab, this.colorSprites, this.config,
+        GameFactory.initializeGame(this.boardView, this.tilePrefab, this.tileRemovalParticlePrefab, this.colorSprites, this.config,
             this.superTilePrefabs, this.boosterPrefabs, this.boostersView, this.gameView, this.session);
     }
 }

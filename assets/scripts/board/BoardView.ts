@@ -2,7 +2,6 @@ import type { GameConfig } from "../core/GameConfig";
 import type { IBoardView } from "./IBoardView";
 import type { CellMove } from "./IBoardEngine";
 import type BoardTileRenderer from "./BoardTileRenderer";
-import type { IInitializable } from "../core/IInitializable";
 
 export interface BoardViewDependencies {
     tileRenderer: BoardTileRenderer;
@@ -13,7 +12,7 @@ export interface BoardViewDependencies {
 const { ccclass, property } = cc._decorator;
 
 @ccclass
-export default class BoardView extends cc.Component implements IBoardView, IInitializable<BoardViewDependencies> {
+export default class BoardView extends cc.Component implements IBoardView {
     @property({ type: cc.Sprite, tooltip: "Фон поля; размер его узла задаёт размеры ячеек." })
     private boardBackground: cc.Sprite = null;
 

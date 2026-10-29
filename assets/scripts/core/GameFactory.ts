@@ -17,9 +17,9 @@ import {GameModel} from "../gameplay/GameModel";
 import type {GameSession} from "../gameplay/GameSession";
 import type {IGameView} from "../gameplay/GameContracts";
 
-/** Единая точка создания игровых компонентов с явным внедрением зависимостей. */
+/** Единая точка создания и инициализации игры с явным внедрением зависимостей. */
 export class GameFactory {
-    public static createBoard(
+    public static initializeGame(
         view: BoardView,
         tilePrefab: cc.Prefab,
         tileRemovalParticlePrefab: cc.Prefab,
@@ -30,7 +30,7 @@ export class GameFactory {
         boostersView: BoostersView,
         gameView: IGameView,
         session: GameSession
-    ): BoardController {
+    ): void {
         if (!boostersView) {
             throw new Error("GameBootstrap requires a BoostersView reference.");
         }
@@ -69,6 +69,5 @@ export class GameFactory {
         boostersView.init(boosters, definitions);
         gameController.init();
         inputService.setStateListener(gameController);
-        return boardController;
     }
 }
