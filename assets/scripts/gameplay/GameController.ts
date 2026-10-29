@@ -50,6 +50,7 @@ export class GameController implements IBoardInputHandler, IBoardInputStateListe
             this.onInputEnabledChanged(false);
             // BoardModel уже изменена движком. Отмена визуализации не отменяет действие.
             this.model.applyTurn(result.removedCount, !usesBooster);
+            this.view.render(this.model.getState());
             const completed = await this.board.applyTurnResult(result);
             if (this.session.getPhase() !== GamePhase.Resolving) {
                 return;
@@ -64,7 +65,6 @@ export class GameController implements IBoardInputHandler, IBoardInputStateListe
             this.session.handleEvent(won ? GameEventType.LevelWon
                 : lost ? GameEventType.LevelLost : GameEventType.TurnResolved);
             this.onInputEnabledChanged(true);
-            this.view.render(this.model.getState());
             if (won || lost) {
                 this.view.showResult(won, this.model.getState());
             }
