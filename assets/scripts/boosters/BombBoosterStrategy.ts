@@ -31,6 +31,10 @@ export default class BombBoosterStrategy extends BoosterEffectStrategy {
                 context.targets[count++] = y * context.columns + x;
             }
         }
-        return board.processRemoval(context.targets, count);
+        const result = board.processRemoval(context.targets, count);
+        if (result.valid) {
+            result.preRemovalEffectIndex = selected[0];
+        }
+        return result;
     }
 }

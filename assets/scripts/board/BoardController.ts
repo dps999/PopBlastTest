@@ -68,13 +68,22 @@ export class BoardController implements IBoardController {
                 return await this.view.waitForAnimations();
             }
 
-            if (result.transformedIndex >= 0) {
+            if (result.preRemovalEffectIndex >= 0 && this.view.playBombEffect(result.preRemovalEffectIndex)
+                && !await this.view.waitForAnimations()) {
+                return false;
+            }
+
+            const isMerge = result.transformedIndex >= 0;
+            if (isMerge) {
                 this.view.mergeTiles(result.removedIndices, result.removedCount, result.transformedIndex);
                 this.view.transformTile(result.transformedIndex, result.transformedValue);
             } else {
                 this.view.removeTiles(result.removedIndices, result.removedCount);
             }
-            if (!await this.view.waitForAnimations()) {
+            const removalCompleted = isMerge
+                ? await this.view.waitForAnimations()
+                : await this.view.waitForRemovals();
+            if (!removalCompleted) {
                 return false;
             }
 

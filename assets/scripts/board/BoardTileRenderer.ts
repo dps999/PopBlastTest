@@ -87,6 +87,7 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
     private disposed: boolean = false;
     private animationPromise: Promise<boolean> = null;
     private animationResolver: (completed: boolean) => void = null;
+    private waitForRemovalOnly: boolean = false;
     private readonly animationExecutor = this.captureAnimationResolver.bind(this);
 
     public setInputLocked(locked: boolean): void {
@@ -99,6 +100,18 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
             return Promise.resolve(!this.disposed);
         }
         if (!this.animationPromise) {
+            this.waitForRemovalOnly = false;
+            this.animationPromise = new Promise<boolean>(this.animationExecutor);
+        }
+        return this.animationPromise;
+    }
+
+    public waitForRemovals(): Promise<boolean> {
+        if (this.disposed || this.removalCount === 0) {
+            return Promise.resolve(!this.disposed);
+        }
+        if (!this.animationPromise) {
+            this.waitForRemovalOnly = true;
             this.animationPromise = new Promise<boolean>(this.animationExecutor);
         }
         return this.animationPromise;
@@ -112,6 +125,7 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
         const resolve = this.animationResolver;
         this.animationResolver = null;
         this.animationPromise = null;
+        this.waitForRemovalOnly = false;
         if (resolve) {
             resolve(completed);
         }
@@ -235,6 +249,14 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
         for (let i = 0; i < count; i++) {
             this.startTileRemoval(indices[i], null);
         }
+    }
+
+    public playBombEffect(index: number): boolean {
+        const tile = this.tiles[index];
+        if (!tile || !this.explosionPool) {
+            return false;
+        }
+        return this.explosionPool.playBomb(tile.node.x, tile.node.y);
     }
 
     public mergeTiles(indices: number[], count: number, targetIndex: number): void {
@@ -483,7 +505,7 @@ export default class BoardTileRenderer extends cc.Component implements IBoardVie
             }
         }
 
-        if (!this.hasAnimations()) {
+        if (this.waitForRemovalOnly ? this.removalCount === 0 : !this.hasAnimations()) {
             this.finishAnimationWait(true);
         }
         this.updateInputState();

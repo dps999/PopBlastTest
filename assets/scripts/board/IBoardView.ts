@@ -7,6 +7,8 @@ export interface IBoardView {
 
     removeTiles(indices: number[], count: number): void;
 
+    playBombEffect(index: number): boolean;
+
     mergeTiles(indices: number[], count: number, targetIndex: number): void;
 
     swapTiles(first: number, second: number): void;
@@ -17,6 +19,9 @@ export interface IBoardView {
 
     /** true после всех анимаций и частиц; false при уничтожении представления. */
     waitForAnimations(): Promise<boolean>;
+
+    /** Ожидает удаления тайлов, не блокируя падение завершением частиц. */
+    waitForRemovals(): Promise<boolean>;
 
     /** Синхронно потребляет префиксы буферов и запускает общее падение. */
     fallTiles(moves: CellMove[], moveCount: number, cells: number[], spawnedIndices: number[], spawnCount: number): void;

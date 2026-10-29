@@ -40,7 +40,7 @@ export class BoardEngine implements IBoardEngine {
         this.result = {
             valid: false, removedIndices: this.matches, matchCount: 0, removedCount: 0,
             transformedIndex: -1, transformedValue: -1, swappedFirstIndex: -1, swappedSecondIndex: -1,
-            moves: this.moves, moveCount: 0
+            preRemovalEffectIndex: -1, moves: this.moves, moveCount: 0
         };
     }
 
@@ -173,6 +173,7 @@ export class BoardEngine implements IBoardEngine {
         result.transformedValue = -1;
         result.swappedFirstIndex = -1;
         result.swappedSecondIndex = -1;
+        result.preRemovalEffectIndex = -1;
         return result;
     }
 

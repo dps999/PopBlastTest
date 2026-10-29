@@ -75,6 +75,10 @@ export default class BombExplosionPool extends cc.Component {
         return this.playFrom(pool, x, y, color);
     }
 
+    public playBomb(x: number, y: number): boolean {
+        return this.playFrom(this.bombs, x, y, null);
+    }
+
     private playFrom(pool: ExplosionPoolState, x: number, y: number, color: cc.Color): boolean {
         if (!pool || pool.availableCount === 0) {
             return false;

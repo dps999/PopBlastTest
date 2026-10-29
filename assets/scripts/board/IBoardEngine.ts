@@ -17,6 +17,8 @@ export interface TurnResult {
     /** Индексы обмена, -1 при отсутствии обмена. */
     swappedFirstIndex: number;
     swappedSecondIndex: number;
+    /** Клетка для эффекта перед удалением; -1, если предварительный эффект не нужен. */
+    preRemovalEffectIndex: number;
     /** Фиксированный массив; читать первые moveCount записей до следующей операции. */
     moves: CellMove[];
     moveCount: number;
