@@ -6,7 +6,7 @@ export interface EffectContext {
 }
 
 /** Реализуется компонентом стратегии на корне префаба. */
-export interface ISuperTileEffectStrategy {
+export interface ISuperTileEffect {
     readonly minimumGroupSize: number;
     readonly spriteFrame: cc.SpriteFrame;
     readonly destructionParticles?: cc.Prefab;
@@ -15,19 +15,19 @@ export interface ISuperTileEffectStrategy {
     collectTargets(originIndex: number, context: EffectContext, targets: number[]): number;
 }
 
-export interface ISuperTileCreationStrategy {
+export interface ISuperTileCreation {
     readonly colorCount: number;
     selectTile(groupSize: number): number;
-    getStrategy(tileValue: number): ISuperTileEffectStrategy;
+    getStrategy(tileValue: number): ISuperTileEffect;
     getActivationEffectPrefab(): cc.Prefab;
 }
 
-export class ThresholdCreationStrategy implements ISuperTileCreationStrategy {
+export class ThresholdCreation implements ISuperTileCreation {
     public readonly colorCount: number;
-    private readonly strategies: ISuperTileEffectStrategy[];
+    private readonly strategies: ISuperTileEffect[];
     private readonly activationEffectPrefab: cc.Prefab;
 
-    constructor(strategies: ISuperTileEffectStrategy[], colorCount: number) {
+    constructor(strategies: ISuperTileEffect[], colorCount: number) {
         this.colorCount = colorCount;
         this.strategies = strategies.slice();
         let activationEffectPrefab: cc.Prefab = null;
@@ -78,7 +78,7 @@ export class ThresholdCreationStrategy implements ISuperTileCreationStrategy {
         return -1;
     }
 
-    public getStrategy(tileValue: number): ISuperTileEffectStrategy {
+    public getStrategy(tileValue: number): ISuperTileEffect {
         return this.strategies[tileValue - this.colorCount] || null;
     }
 

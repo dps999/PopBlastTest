@@ -1,12 +1,12 @@
 import type { TurnResult } from "../board/IBoardEngine";
 import { BoardEffectType } from "../core/BoardEffectType";
 import type { IBoosterBoardActions, BoosterContext } from "./BoosterContracts";
-import BoosterEffectStrategy from "./BoosterEffectStrategy";
+import BoosterEffect from "./BoosterEffect";
 
 const { ccclass, property } = cc._decorator;
 
 @ccclass
-export default class BombBoosterStrategy extends BoosterEffectStrategy {
+export default class BombBooster extends BoosterEffect {
     public readonly targetCount: number = 1;
 
     @property({ type: cc.Integer, min: 1 })

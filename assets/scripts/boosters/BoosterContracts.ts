@@ -1,13 +1,13 @@
 import type { IBoardInputStateListener } from "../board/IBoardController";
 import type { TurnResult } from "../board/IBoardEngine";
 
-/** Стратегии используют только операции поля и отделены от рендеринга. */
+/** Эффекты используют только операции поля и отделены от рендеринга. */
 export interface IBoosterBoardActions {
     processRemoval(indices: number[], count: number): TurnResult;
     processSwap(first: number, second: number): TurnResult;
 }
 
-export interface IBoosterEffectStrategy {
+export interface IBoosterEffect {
     readonly targetCount: number;
     validate(): void;
     canSelect(index: number, cells: number[], selected: number[], selectedCount: number): boolean;
@@ -21,7 +21,7 @@ export interface BoosterContext {
 }
 
 export interface BoosterDefinition {
-    readonly effect: IBoosterEffectStrategy;
+    readonly effect: IBoosterEffect;
     readonly initialCount: number;
     readonly icon: cc.SpriteFrame;
 }

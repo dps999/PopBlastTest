@@ -6,7 +6,7 @@ const { ccclass, property, disallowMultiple } = cc._decorator;
 /** Общая стратегия для всех тайлов данного префаба. Не хранит состояние хода. */
 @ccclass
 @disallowMultiple
-export default abstract class SuperTileStrategy extends cc.Component implements ISuperTileEffectStrategy {
+export default abstract class SuperTile extends cc.Component implements ISuperTileEffectStrategy {
     @property({ type: cc.Integer, min: 2, tooltip: "Минимальный размер обычной группы для создания усилителя." })
     public minimumGroupSize: number = 8;
 

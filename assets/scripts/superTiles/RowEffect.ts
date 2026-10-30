@@ -1,11 +1,11 @@
-import SuperTileStrategy from "./SuperTileStrategy";
+import SuperTile from "./SuperTile";
 import { BoardEffectType } from "../core/BoardEffectType";
 import type { EffectContext } from "./SuperTileStrategies";
 
 const { ccclass } = cc._decorator;
 
 @ccclass
-export default class RowEffectStrategy extends SuperTileStrategy {
+export default class RowEffect extends SuperTile {
     public readonly activationEffectType: BoardEffectType = BoardEffectType.HorizontalRocket;
 
     public collectTargets(originIndex: number, context: EffectContext, targets: number[]): number {

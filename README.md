@@ -11,7 +11,7 @@
 
 ## Бустеры
 
-- Реализуйте наследника `BoosterEffectStrategy`: `targetCount`, `execute` и при необходимости `canSelect`/`validate`.
-- Префаб в `assets/prefabs/boosters/` должен содержать ровно один `BoosterConfig` и один компонент стратегии, без `Sprite`. В `BoosterConfig` задаются `icon` и `initialCount`.
+- Реализуйте наследника `BoosterEffect`: `targetCount`, `execute` и при необходимости `canSelect`/`validate`.
+- Префаб в `assets/prefabs/boosters/` должен содержать ровно один `BoosterConfig` и один `BoosterEffect`, без `Sprite`. В `BoosterConfig` задаются `icon` и `initialCount`.
 - Добавьте префаб в `GameBootstrap.boosterPrefabs`; порядок определяет порядок кнопок. Для динамических кнопок нужен `BoostersView.buttonPrefab` с `BoosterButton`.
 - Для удаления используйте `context.targets` и `board.processRemoval`; для обмена — `board.processSwap`.

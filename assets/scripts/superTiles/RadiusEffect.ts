@@ -1,10 +1,10 @@
-import SuperTileStrategy from "./SuperTileStrategy";
+import SuperTile from "./SuperTile";
 import type { EffectContext } from "./SuperTileStrategies";
 
 const { ccclass, property } = cc._decorator;
 
 @ccclass
-export default class RadiusEffectStrategy extends SuperTileStrategy {
+export default class RadiusEffect extends SuperTile {
     @property({ type: cc.Integer, min: 1 })
     public radius: number = 1;
 
