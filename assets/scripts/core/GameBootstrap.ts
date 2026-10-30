@@ -5,10 +5,6 @@ import BoostersView from "../boosters/BoostersView";
 import GameView from "../gameplay/GameView";
 import { GameSession } from "../gameplay/GameSession";
 
-// Включаем до загрузки сцены, чтобы маленькие спрайты объединялись в динамический атлас.
-cc.macro.CLEANUP_IMAGE_CACHE = false;
-cc.dynamicAtlasManager.enabled = true;
-
 const { ccclass, property } = cc._decorator;
 
 @ccclass
