@@ -1,6 +1,6 @@
 # Добавление игровых элементов
 
-Настройки сцены: `assets/scenes/GamePlay.fire` → `GameBootstrap` (`GameConfig`). Версия проекта — Cocos Creator 2.4.15.
+Настройки игры: `assets/scenes/GamePlay.fire` → `GameBootstrap` (`GameConfig`). .
 
 ## Супер тайлы
 
