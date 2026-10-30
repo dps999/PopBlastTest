@@ -5,6 +5,9 @@ import BoostersView from "../boosters/BoostersView";
 import GameView from "../gameplay/GameView";
 import { GameSession } from "../gameplay/GameSession";
 
+cc.macro.CLEANUP_IMAGE_CACHE = false;
+cc.dynamicAtlasManager.enabled = true;
+
 const { ccclass, property } = cc._decorator;
 
 @ccclass
