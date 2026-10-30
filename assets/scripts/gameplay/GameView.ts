@@ -1,5 +1,6 @@
 import type { IGameState, IGameView } from "./GameContracts";
 import GameOverPopupView from "./GameOverPopupView";
+import HudLayout from "./HudLayout";
 
 const { ccclass, property } = cc._decorator;
 
@@ -16,6 +17,30 @@ export default class GameView extends cc.Component implements IGameView {
 
     @property(GameOverPopupView)
     private wonPopup: GameOverPopupView = null;
+
+    private hudLayout: HudLayout = null;
+
+    protected onLoad(): void {
+        this.hudLayout = new HudLayout(this.node);
+        this.hudLayout.enable();
+    }
+
+    protected start(): void {
+        this.scheduleOnce(this.refreshHudLayout, 0);
+    }
+
+    protected onDestroy(): void {
+        if (this.hudLayout) {
+            this.hudLayout.dispose();
+            this.hudLayout = null;
+        }
+    }
+
+    private refreshHudLayout(): void {
+        if (this.hudLayout) {
+            this.hudLayout.refresh();
+        }
+    }
 
     public render(state: IGameState): void {
         if (!this.scoreLabel || !this.movesLabel) {
