@@ -5,16 +5,18 @@
 Настройки игры: `assets/scenes/GamePlay.fire` → `GameBootstrap` (`GameConfig`). .
 
 # Добавление игровых элементов
-## Супер тайлы
+## Супер-тайлы
 
-- Добавьте стратегию-наследника `SuperTileStrategy` в `assets/scripts/superTiles/`; `collectTargets` заполняет переданный массив индексов и возвращает их количество.
-- Создайте префаб с одним компонентом стратегии. Настройте `spriteFrame`, `minimumGroupSize` и нужные параметры.
-- Зарегистрируйте префаб в `GameBootstrap.superTilePrefabs`.
-- При равном пороге создания стратегия выбирается случайно. Анимированные стратегии должны использовать общий `activationEffectPrefab`; новые типы анимации регистрируются в `BoardEffectType`, `BoardEffectAnimationDispatcher` и `BoardTileRenderer`.
+1. Создайте наследника `SuperTileStrategy`, реализуйте `collectTargets`.
+2. Создайте префаб со стратегией, настройте параметры.
+3. Добавьте в `GameBootstrap.superTilePrefabs`.
+
+При равных порогах выбор случайный. Новые анимации регистрируются в `BoardEffectType`, `BoardEffectAnimationDispatcher` и `BoardTileRenderer`.
 
 ## Бустеры
 
-- Реализуйте наследника `BoosterEffect`: `targetCount`, `execute` и при необходимости `canSelect`/`validate`.
-- Префаб в `assets/prefabs/boosters/` должен содержать ровно один `BoosterConfig` и один `BoosterEffect`, без `Sprite`. В `BoosterConfig` задаются `icon` и `initialCount`.
-- Добавьте префаб в `GameBootstrap.boosterPrefabs`; порядок определяет порядок кнопок. Для динамических кнопок нужен `BoostersView.buttonPrefab` с `BoosterButton`.
-- Для удаления используйте `context.targets` и `board.processRemoval`; для обмена — `board.processSwap`.
+1. Создайте наследника `BoosterEffect`, реализуйте `targetCount` и `execute`.
+2. Создайте префаб с `BoosterConfig` и `BoosterEffect`, настройте иконку и количество.
+3. Добавьте в `GameBootstrap.boosterPrefabs`.
+
+Удаление — `board.processRemoval`, обмен — `board.processSwap`.
