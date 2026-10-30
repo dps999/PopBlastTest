@@ -1,5 +1,6 @@
+## Pop Blast Test
 
-Игра поддерживает поворот ориентации
+Игра поддерживает поворот экрана
 
 Настройки игры: `assets/scenes/GamePlay.fire` → `GameBootstrap` (`GameConfig`). .
 
